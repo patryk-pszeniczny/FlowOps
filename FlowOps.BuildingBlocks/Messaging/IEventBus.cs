@@ -9,7 +9,7 @@ namespace FlowOps.BuildingBlocks.Messaging
 {
     public interface IEventBus
     {
-        Task PublishAsync<T>(T @event) where T : InegrationEvent;
-        void Subscribe<T>(Func<T, Task> handler) where T : InegrationEvent;
+        Task PublishAsync<T>(T @event) where T : IntegrationEvent;
+        void Subscribe<T>(Func<T, Task> handler) where T : IntegrationEvent;
     }
 }

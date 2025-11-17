@@ -9,8 +9,8 @@ namespace FlowOps.BuildingBlocks.Messaging
 {
     public class InMemoryEventBus : IEventBus
     {
-        private readonly Dictionary<Type, List<Func<InegrationEvent, Task>>> _handlers = new();
-        public Task PublishAsync<T>(T @event) where T : InegrationEvent
+        private readonly Dictionary<Type, List<Func<IntegrationEvent, Task>>> _handlers = new();
+        public Task PublishAsync<T>(T @event) where T : IntegrationEvent
         {
             var eventType = typeof(T);
             if(_handlers.TryGetValue(eventType, out var handlers))
@@ -21,12 +21,12 @@ namespace FlowOps.BuildingBlocks.Messaging
             return Task.CompletedTask;
         }
 
-        public void Subscribe<T>(Func<T, Task> handler) where T : InegrationEvent
+        public void Subscribe<T>(Func<T, Task> handler) where T : IntegrationEvent
         {
             var eventType = typeof(T);
             if(!_handlers.TryGetValue(eventType, out var handlers))
             {
-                handlers = new List<Func<InegrationEvent, Task>>();
+                handlers = new List<Func<IntegrationEvent, Task>>();
                 _handlers.Add(eventType, handlers);
             }
             handlers.Add(evt => handler((T)evt));

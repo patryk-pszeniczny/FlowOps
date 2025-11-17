@@ -2,7 +2,7 @@
 
 namespace FlowOps.Events
 {
-    public class SubscriptionActivatedEvent : InegrationEvent
+    public class SubscriptionActivatedEvent : IntegrationEvent
     {
         public Guid SubscriptionId { get; init; }
         public Guid CustomerId { get; init; }

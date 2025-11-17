@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FlowOps.BuildingBlocks.Integration
 {
-    public abstract class InegrationEvent
+    public abstract class IntegrationEvent
     {
         public Guid Id { get; init; } = Guid.NewGuid();
         public DateTime OccuredOn { get; init; } = DateTime.UtcNow;

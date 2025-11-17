@@ -7,6 +7,8 @@ namespace FlowOps.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Consumes("application/json")]
+    [Produces("application/json")]
     public class SubscriptionsController : ControllerBase
     {
         private readonly IEventBus _eventBus;
