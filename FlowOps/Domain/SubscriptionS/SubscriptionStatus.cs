@@ -1,4 +1,4 @@
-﻿namespace FlowOps.Domain
+﻿namespace FlowOps.Domain.Subscriptions
 {
     public enum SubscriptionStatus
     {
