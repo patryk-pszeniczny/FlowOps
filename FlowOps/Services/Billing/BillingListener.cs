@@ -21,6 +21,10 @@ namespace FlowOps.Services.Billing
         {
             _eventBus.Subscribe<SubscriptionActivatedEvent>(Handle);
             _logger.LogInformation("BillingListener subscribed to SubscriptionActivatedEvent");
+
+            _eventBus.Subscribe<SubscriptionCancelledEvent>(HandleCancelled);
+            _logger.LogInformation("BillingListener subscribed to SubscriptionCancelledEvent");
+
             return Task.CompletedTask;
         }
 
@@ -35,6 +39,13 @@ namespace FlowOps.Services.Billing
             var handler = scope.ServiceProvider.GetRequiredService<IBillingHandler>();
 
             await handler.HandleAsync(ev);
+        }
+        private Task HandleCancelled(SubscriptionCancelledEvent ev)
+        {
+            _logger.LogInformation(
+                "Billing: subscription {SubscriptionId} cancelled for Customer {CustomerId}, Plan {PlanCode}",
+                ev.SubscriptionId, ev.CustomerId, ev.PlanCode);
+            return Task.CompletedTask;
         }
     }
 }
