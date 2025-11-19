@@ -31,7 +31,7 @@ namespace FlowOps.Controllers
             {
                 type = e.GetType().Name,
                 e.Id,
-                e.OccuredOn,
+                e.OccurredOn,
                 e.Version
             });
             return Ok(snaped);

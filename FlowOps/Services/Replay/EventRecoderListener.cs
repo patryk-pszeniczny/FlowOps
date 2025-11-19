@@ -41,7 +41,7 @@ namespace FlowOps.Services.Replay
         private Task Append(IntegrationEvent ev)
         {
             _recorder.Append(ev);
-            _logger.LogDebug("Recorded {EventType} with Id={Id} at {At}", ev.GetType().Name, ev.Id, ev.OccuredOn);
+            _logger.LogDebug("Recorded {EventType} with Id={Id} at {At}", ev.GetType().Name, ev.Id, ev.OccurredOn);
             return Task.CompletedTask;
         }
     }
