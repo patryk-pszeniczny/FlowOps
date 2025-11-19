@@ -3,6 +3,7 @@ using FlowOps.Events;
 using FlowOps.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using FlowOps.Domain.Subscriptions;
+using FlowOps.Application.Subscriptions;
 
 namespace FlowOps.Controllers
 {
@@ -12,36 +13,22 @@ namespace FlowOps.Controllers
     [Produces("application/json")]
     public class SubscriptionsController : ControllerBase
     {
-        private readonly IEventBus _eventBus;
-
-        public SubscriptionsController(IEventBus eventBus)
+        private readonly SubscriptionCommandService _service;
+        public SubscriptionsController(SubscriptionCommandService service)
         {
-            _eventBus = eventBus;
+            _service = service;
         }
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSubscriptionRequest request)
         {
-            try
-            {
-                var subscription = Subscription.Create(request.CustomerId, request.PlanCode);
-                var ev = subscription.Activate(DateTime.UtcNow);
-
-                await _eventBus.PublishAsync(ev);
-
-                return Ok(new
+            var id = await _service.CreateAsync(request.CustomerId, request.PlanCode, DateTime.UtcNow);
+            return Ok(
+                new
                 {
                     message = "Subscription created and event published.",
-                    subscriptionId = ev.SubscriptionId
-                });
-            }
-            catch(ArgumentException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch(InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
+                    subscriptionId = id
+                }
+            );
         }
     }
 }
