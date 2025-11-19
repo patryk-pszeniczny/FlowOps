@@ -4,6 +4,7 @@ using FlowOps.Services.Reporting;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Application.Subscriptions;
 using FlowOps.Services.Billing;
+using FlowOps.Services.Replay;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,11 @@ builder.Services.AddHostedService<ReportingListener>();
 //Subscriptions
 builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
 builder.Services.AddScoped<SubscriptionCommandService>();
+
+//Replay
+builder.Services.AddSingleton<EventRecoder>();
+builder.Services.AddHostedService<EventRecoderListener>();
+
 
 var app = builder.Build();
 
