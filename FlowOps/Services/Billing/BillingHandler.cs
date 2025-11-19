@@ -1,8 +1,7 @@
 ﻿using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
-using Microsoft.Extensions.Logging;
 
-namespace FlowOps.Services;
+namespace FlowOps.Services.Billing;
 
 public class BillingHandler : IBillingHandler
 {

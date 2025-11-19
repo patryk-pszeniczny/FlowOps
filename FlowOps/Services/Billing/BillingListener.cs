@@ -1,8 +1,7 @@
-﻿
-using FlowOps.BuildingBlocks.Messaging;
+﻿using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
 
-namespace FlowOps.Services
+namespace FlowOps.Services.Billing
 {
     public class BillingListener : IHostedService
     {

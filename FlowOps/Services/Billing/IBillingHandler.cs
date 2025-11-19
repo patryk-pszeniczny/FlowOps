@@ -1,6 +1,6 @@
 ﻿using FlowOps.Events;
 
-namespace FlowOps.Services
+namespace FlowOps.Services.Billing
 {
     public interface IBillingHandler
     {
