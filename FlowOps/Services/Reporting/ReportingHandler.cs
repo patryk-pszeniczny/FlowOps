@@ -44,5 +44,19 @@ namespace FlowOps.Services.Reporting
                 ev.CustomerId, ev.Amount, ev.Currency, report.TotalPaid);
             return Task.CompletedTask;
         }
+
+        public Task On(SubscriptionCancelledEvent ev, CancellationToken cancellationToken = default)
+        {
+            var report = _store.GetOrAdd(ev.CustomerId);
+            if(report.ActiveSubscriptions > 0)
+            {
+                report.ActiveSubscriptions -= 1;
+            }
+            _logger.LogInformation(
+                "Report cancelled updated for CustomerId: {CustomerId}, ActiveSubscriptions={Active}",
+                ev.CustomerId, report.ActiveSubscriptions
+            );
+            return Task.CompletedTask;
+        }
     }
 }

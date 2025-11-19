@@ -30,5 +30,17 @@ namespace FlowOps.Controllers
                 }
             );
         }
+        [HttpPost("{id:guid}/cancel")]
+        public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
+        {
+            await _service.CancelAsync(id, DateTime.UtcNow, ct);
+            return Ok(
+                new
+                {
+                    message = "Subscription cancelled",
+                    subscriptionId = id
+                }
+            );
+        }
     }
 }

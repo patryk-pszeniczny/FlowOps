@@ -1,5 +1,6 @@
 ﻿using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Subscriptions;
+using FlowOps.Events;
 
 namespace FlowOps.Application.Subscriptions
 {
@@ -22,6 +23,22 @@ namespace FlowOps.Application.Subscriptions
             await _eventBus.PublishAsync(ev);
 
             return subscription.Id;
+        }
+        public async Task CancelAsync(Guid subscriptionId, DateTime utcNow, CancellationToken ct = default)
+        {
+            if(!_repository.TryGet(subscriptionId, out var subscription) || subscription is null)
+            {
+                throw new KeyNotFoundException($"Subscription {subscriptionId} not found.");
+            }
+            subscription.Cancel(utcNow);
+
+            var ev = new SubscriptionCancelledEvent
+            {
+                SubscriptionId = subscriptionId,
+                CustomerId = subscription.CustomerId,
+                PlanCode = subscription.PlanCode,
+            };
+            await _eventBus.PublishAsync(ev);
         }
     }
 }
