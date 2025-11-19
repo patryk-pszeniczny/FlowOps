@@ -23,7 +23,9 @@
         "ASPNETCORE_HTTPS_PORTS": "8081",
         "ASPNETCORE_HTTP_PORTS": "8080"
       },
-      "publishAllPorts": true,
+      "publishAllPorts": false,
+      "httpPort": 5056,
+      "httpsPort": 7066,
       "useSSL": true
     },
     "IIS Express": {
