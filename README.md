@@ -212,7 +212,7 @@ Console shows the listening URLs, e.g. `http://localhost:5056`. (hardcoded value
 
 ### Requirements
 - Docker Desktop (Windows): **Use WSL 2 based engine** *or* Hyper‑V with **Containers** feature.
-- Make sure the drive/folder with your repo (e.g. `D:\i4b\FlowOps`) is shared in Docker Desktop → **Settings → Resources → File sharing**.
+- Make sure the drive/folder with your repo (e.g. `D:\xxx\FlowOps`) is shared in Docker Desktop → **Settings → Resources → File sharing**.
 
 ### Minimal Dockerfile (solution root)
 If you don’t already use the VS‑generated Dockerfile, a minimal image could look like this:
