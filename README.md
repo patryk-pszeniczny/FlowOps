@@ -1,6 +1,6 @@
 # FlowOps – Event‑Driven Subscription & Billing (MVP)
 
-This is a **learning-first**, event‑driven platform in ASP.NET Core that demonstrates subscriptions, billing, reporting and replay — currently running **in a single process** for simplicity. The architecture and contracts are prepared to split into microservices later.
+This is a **learning-first**, event‑driven platform in ASP.NET Core that demonstrates subscriptions, billing, reporting and replay - currently running **in a single process** for simplicity. The architecture and contracts are prepared to split into microservices later.
 
 ---
 
@@ -108,7 +108,7 @@ Replay:
 1. Set **FlowOps** as startup project
 2. `F5` (IIS Express or Kestrel)
 
-Console shows the listening URLs, e.g. `http://localhost:5056`.
+Console shows the listening URLs, e.g. `http://localhost:5056`. (hardcoded value)
 
 > Docker is optional right now; first learn the flow locally.
 
