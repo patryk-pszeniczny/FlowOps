@@ -1,6 +1,7 @@
 ﻿using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
+using FlowOps.Pricing;
 
 namespace FlowOps.Services.Billing;
 
@@ -8,11 +9,13 @@ public class BillingHandler : IBillingHandler
 {
     private readonly ILogger<BillingHandler> _logger;
     private readonly IEventBus _eventBus;
+    private readonly IPlanPricing _planPricing;
 
-    public BillingHandler(ILogger<BillingHandler> logger, IEventBus eventBus)
+    public BillingHandler(ILogger<BillingHandler> logger, IEventBus eventBus, IPlanPricing pricing)
     {
         _logger = logger;
         _eventBus = eventBus;
+        _planPricing = pricing;
     }
     private async Task PublishWithRetryAsync(IntegrationEvent ev, int maxRetries = 3, int initialDelayMs = 50)
     {
@@ -35,7 +38,7 @@ public class BillingHandler : IBillingHandler
     }
     public async Task HandleAsync(SubscriptionActivatedEvent ev, CancellationToken cancellationToken = default)
     {
-        var amount = ResolveAmount(ev.PlanCode);
+        var amount = _planPricing.GetPrice(ev.PlanCode);
 
         _logger.LogInformation(
             "BillingHandler: generating invoice for SubscriptionId={SubscriptionId}, CustomerId={CustomerId}, Plan={Plan}, Amount={Amount} PLN",
@@ -56,12 +59,4 @@ public class BillingHandler : IBillingHandler
         };
         await PublishWithRetryAsync(issued);
     }
-    private static decimal ResolveAmount(string? planCode) =>
-        (planCode ?? string.Empty).ToUpperInvariant() switch
-        {
-            "PRO" => 99m,
-            "BUSINESS" => 199m,
-            "ENTERPRISE" => 499m,
-            _ => 49m // Default plan
-        };
 }
