@@ -1,4 +1,5 @@
-﻿using FlowOps.BuildingBlocks.Messaging;
+﻿using FlowOps.BuildingBlocks.Integration;
+using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
 
 namespace FlowOps.Services.Billing;
@@ -13,7 +14,25 @@ public class BillingHandler : IBillingHandler
         _logger = logger;
         _eventBus = eventBus;
     }
-
+    private async Task PublishWithRetryAsync(IntegrationEvent ev, int maxRetries = 3, int initialDelayMs = 50)
+    {
+        var delay = initialDelayMs;
+        for(int attempt =1; ; attempt++)
+        {
+            try
+            {
+                await _eventBus.PublishAsync(ev);
+                return;
+            }
+            catch (Exception ex) when (attempt <= maxRetries)
+            {
+                _logger.LogWarning(ex, "Published failed (attempt {Attempt}/{MaxRetries}). Retrying in {Delay}ms...", 
+                    attempt, maxRetries, delay);
+                await Task.Delay(delay);
+                delay *= 2;
+            }
+        }
+    }
     public async Task HandleAsync(SubscriptionActivatedEvent ev, CancellationToken cancellationToken = default)
     {
         var amount = ResolveAmount(ev.PlanCode);
@@ -35,7 +54,7 @@ public class BillingHandler : IBillingHandler
             Currency = "PLN",
             IssuedAt = DateTime.UtcNow
         };
-        await _eventBus.PublishAsync(issued);
+        await PublishWithRetryAsync(issued);
     }
     private static decimal ResolveAmount(string? planCode) =>
         (planCode ?? string.Empty).ToUpperInvariant() switch
