@@ -5,6 +5,7 @@ using FlowOps.Domain.Subscriptions;
 using FlowOps.Application.Subscriptions;
 using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
+using FlowOps.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +41,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.UseMiddleware<ProblemDetailsMiddleware>();
 app.MapControllers();
 app.MapHealthChecks("/healthz");
 

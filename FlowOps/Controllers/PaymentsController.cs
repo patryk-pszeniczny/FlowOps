@@ -1,5 +1,5 @@
 ﻿using FlowOps.BuildingBlocks.Messaging;
-using FlowOps.Contracts;
+using FlowOps.Contracts.Request;
 using FlowOps.Events;
 using Microsoft.AspNetCore.Mvc;
 

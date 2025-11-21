@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace FlowOps.Contracts
+namespace FlowOps.Contracts.Request
 {
     public sealed class CreateSubscriptionRequest
     {

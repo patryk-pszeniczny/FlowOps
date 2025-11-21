@@ -1,9 +1,9 @@
 ﻿using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
-using FlowOps.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Application.Subscriptions;
+using FlowOps.Contracts.Request;
 
 namespace FlowOps.Controllers
 {
