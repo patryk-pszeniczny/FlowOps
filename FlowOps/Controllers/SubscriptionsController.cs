@@ -42,5 +42,28 @@ namespace FlowOps.Controllers
                 }
             );
         }
+        [HttpPost("{id:guid}/suspend")]
+        public async Task<IActionResult> Suspend(Guid id, CancellationToken ct)
+        {
+            await _service.SuspendAsync(id, DateTime.UtcNow, ct);
+            return Ok(
+                new
+                {
+                    message = "Subscription suspended",
+                    subscriptionId = id
+                });
+        }
+        [HttpPost("{id:guid}/resume")]
+        public async Task<IActionResult> Resume(Guid id, CancellationToken ct)
+        {
+            await _service.ResumeAsync(id, DateTime.UtcNow, ct);
+            return Ok(
+                new
+                {
+                    message = "Subscription resumed",
+                    subscriptionId = id
+                });
+        }
+
     }
 }
