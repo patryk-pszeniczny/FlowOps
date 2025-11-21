@@ -70,6 +70,18 @@ namespace FlowOps.Domain.Subscriptions
 
         public bool IsActiveAt(DateTime utcNow)
             => Status == SubscriptionStatus.Active && (!ExpiresAt.HasValue || ExpiresAt.Value > utcNow);
+        public void Suspend()
+        {
+            if(Status != SubscriptionStatus.Active)
+                throw new InvalidOperationException("Only active subscriptions can be suspended.");
+            Status = SubscriptionStatus.Suspended;
+        }
+        public void Resume()
+        {
+            if(Status != SubscriptionStatus.Suspended)
+                throw new InvalidOperationException("Only suspended subscriptions can be resumed.");
+            Status = SubscriptionStatus.Active;
+        }
 
     }
 }

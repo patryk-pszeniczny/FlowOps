@@ -6,5 +6,6 @@
         Active = 1,
         Canceled = 2,
         Expired = 3,
+        Suspended = 4
     }
 }
