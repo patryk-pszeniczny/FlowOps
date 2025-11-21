@@ -6,6 +6,7 @@ using FlowOps.Application.Subscriptions;
 using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
 using FlowOps.Middleware;
+using FlowOps.Pricing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,9 @@ builder.Services.AddScoped<SubscriptionCommandService>();
 //Replay
 builder.Services.AddSingleton<EventRecorder>();
 builder.Services.AddHostedService<EventRecorderListener>();
+
+//Pricing
+builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
 
 
 var app = builder.Build();
