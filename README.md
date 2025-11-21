@@ -1,189 +1,265 @@
-# FlowOps – Event-Driven Subscription & Billing (MVP)
+# FlowOps – Event‑Driven Subscription & Billing (MVP)
 
-This project is a simple skeleton of a B2B, event-driven platform. It shows, in a single service:
-
-- accepting an HTTP request (create subscription),
-- publishing an integration/domain event,
-- listening to that event in a separate component (billing listener),
-- logging the handling of that event.
-
-Later this can be split into separate microservices (Identity, Customers, Subscriptions, Billing, Reporting), but right now everything runs in one process to make learning .NET + Docker easier.
+This is a **learning-first**, event‑driven platform in ASP.NET Core that demonstrates subscriptions, billing, reporting and replay - currently running **in a single process** for simplicity. The architecture and contracts are prepared to split into microservices later.
 
 ---
 
-## 1. Requirements
+## ✅ What’s implemented now
+
+- **Create & cancel subscriptions** (domain aggregate with invariants)
+- **Billing** on activation (`InvoiceIssuedEvent`) + **Payments** (`InvoicePaidEvent`)
+- **Reporting (read‑model)**: per‑customer `ActiveSubscriptions`, `TotalInvoiced`, `TotalPaid`
+- **Event bus** (`IEventBus`) with **in‑memory** implementation
+- **Event recorder + replay** to rebuild read‑models
+- **Postman‑friendly endpoints**
+
+---
+
+## 🧰 Requirements
 
 - .NET SDK **9.0**
-- Visual Studio 2022 **17.14.x** (current)
-- Docker Desktop in **Linux containers** mode
-- WSL2 / Hyper-V enabled on Windows
-- Postman (or any HTTP client)
+- Visual Studio 2022 (Current, 17.8+ recommended)
+- Postman (or curl)
+- (Optional) Docker Desktop, WSL2/Hyper‑V enabled
+
+> You can run everything **without Docker** while learning; Docker can be enabled later.
 
 ---
 
-## 2. Solution structure
+## 🗂️ Solution structure
 
-There are currently **two** projects in the solution:
+### `FlowOps` (ASP.NET Core Web API)
 
-### 2.1 `FlowOps` (ASP.NET Core Web API)
-- `Controllers/SubscriptionsController.cs` – exposes `POST /api/Subscriptions`
-- `Contracts/CreateSubscriptionRequest.cs` – input DTO
-- `Events/SubscriptionActivatedEvent.cs` – integration event published by the controller
-- `Services/IBillingHandler.cs` – abstraction for billing logic
-- `Services/BillingHandler.cs` – current implementation (just logs the event)
-- `Services/BillingListener.cs` – `IHostedService` that subscribes to the event bus and forwards events to the handler
-- `Program.cs` – DI setup (event bus, handler, hosted service, controllers)
+**Contracts**
+- `Contracts/CreateSubscriptionRequest.cs`
+- `Contracts/PayInvoiceRequest.cs`
 
-### 2.2 `FlowOps.BuildingBlocks`
-- `Integration/IntegrationEvent.cs` – base class for integration events (`Id`, `OccurredOn`, `Version`)
-- `Messaging/IEventBus.cs` – event bus abstraction
-- `Messaging/InMemoryEventBus.cs` – simple in-memory bus (publish + subscribe)
+**Domain / Application**
+- `Domain/Subscriptions/Subscription.cs` – aggregate + invariants (`Activate`, `Cancel`)
+- `Domain/Subscriptions/InMemorySubscriptionRepository.cs`
+- `Application/Subscriptions/SubscriptionCommandService.cs` – orchestration (publish events)
 
-This separation allows reusing shared code later across multiple services.
+**Events (integration)**
+- `Events/SubscriptionActivatedEvent.cs`
+- `Events/SubscriptionCancelledEvent.cs`
+- `Events/InvoicePaidEvent.cs`
 
----
+**Billing**
+- `Services/Billing/IBillingHandler.cs`
+- `Services/Billing/BillingHandler.cs` – generates invoice amount & publishes `InvoiceIssuedEvent`
+- `Services/Billing/BillingListener.cs` – subscribes to `SubscriptionActivatedEvent` (and logs cancel)
 
-## 3. Running in Docker
+**Reporting (CQRS/read‑model)**
+- `Reports/Models/CustomerReport.cs`
+- `Reports/Stores/IReportingStore.cs`
+- `Reports/Stores/InMemoryReportingStore.cs`
+- `Services/Reporting/IReportingHandler.cs`
+- `Services/Reporting/ReportingHandler.cs` – updates: active/invoiced/paid/cancelled
+- `Services/Reporting/ReportingListener.cs` – subscribes to events and routes to handler
 
-1. Make sure Docker Desktop is **running** and is set to **Linux containers**.
-2. Run the project in Visual Studio using the **Docker** launch profile.
-3. In the container logs you should see:
-   ```text
-   Now listening on: http://[::]:8080
-   Now listening on: https://[::]:8081
-   ```
-4. Check container ports:
-   ```powershell
-   docker ps
-   ```
-   Example output:
-   ```text
-   0.0.0.0:32768->8080/tcp, 0.0.0.0:32769->8081/tcp
-   ```
-   That means:
-   - HTTP is at: `http://localhost:32768`
-   - HTTPS is at: `https://localhost:32769` (self-signed cert → disable SSL verification in Postman)
+**Replay**
+- `Services/Replay/EventRecorder.cs` – in‑memory append‑only buffer
+- `Services/Replay/EventRecorderListener.cs` – records key events for replay
+- `Controllers/ReplayController.cs` – snapshot + rebuild reports
 
-5. Test with Postman:
+**API**
+- `Controllers/SubscriptionsController.cs` – `POST /api/subscriptions`, `POST /api/subscriptions/{id}/cancel`
+- `Controllers/PaymentsController.cs` – `POST /api/payments`
+- `Controllers/ReportsController.cs` – `GET /api/reports/customers/{customerId}`
 
-   **POST** `http://localhost:32768/api/Subscriptions`
+**Composition**
+- `Program.cs` – DI registrations for EventBus, Repository, Billing, Reporting, Replay, Controllers
 
-   Body:
-   ```json
-   {
-     "customerId": "00000000-0000-0000-0000-000000000001",
-     "planCode": "PRO"
-   }
-   ```
+### `FlowOps.BuildingBlocks` (shared)
 
-   Response:
-   ```json
-   {
-     "message": "Subscription created and event published",
-     "subscriptionId": "..."
-   }
-   ```
+- `Integration/IntegrationEvent.cs` — `Id`, `OccurredOn`, `Version`
+- `Integration/InvoiceIssuedEvent.cs`
+- `Messaging/IEventBus.cs`, `Messaging/InMemoryEventBus.cs`
 
-6. In Docker Desktop → Containers → Logs you should see something like:
-   ```text
-   info: FlowOps.Services.BillingListener[0]
-         BillingListener subscribed to SubscriptionActivatedEvent
-   info: FlowOps.Services.BillingHandler[0]
-         BillingHandler: generating invoice for SubscriptionId=..., CustomerId=..., Plan=PRO
-   ```
-
-That confirms the full flow: HTTP → event → listener → handler.
+> Later, `FlowOps.BuildingBlocks` and event contracts can be shared across separate microservices.
 
 ---
 
-## 4. Current endpoints
+## 🔄 Event flow (happy path)
 
-### `POST /api/Subscriptions`
-Creates a (demo) subscription and publishes `SubscriptionActivatedEvent`.
+1. **Create Subscription** → `SubscriptionCommandService` activates aggregate → publishes **`SubscriptionActivatedEvent`**
+2. **BillingListener** receives activation → **BillingHandler** computes amount → publishes **`InvoiceIssuedEvent`**
+3. **ReportingListener / ReportingHandler** updates:
+   - `ActiveSubscriptions += 1`
+   - `TotalInvoiced += amount`
+4. **PaymentsController** publishes **`InvoicePaidEvent`** → Reporting updates `TotalPaid`
 
-**Request:**
+Cancellation path:
+
+- `POST /api/subscriptions/{id}/cancel` → domain `Cancel()` → publishes **`SubscriptionCancelledEvent`**
+- Reporting decrements `ActiveSubscriptions` (not below 0)
+- Billing logs cancellation
+
+Replay:
+
+- **EventRecorder** records key events
+- `POST /api/replay/reports/rebuild` clears in‑memory store and replays events (in publish order)
+
+---
+
+## 🚀 Run
+
+### Visual Studio
+1. Set **FlowOps** as startup project
+2. `F5` (IIS Express or Kestrel)
+
+Console shows the listening URLs, e.g. `http://localhost:5056`. (hardcoded value)
+
+> Docker is optional right now; first learn the flow locally.
+
+---
+
+## 📡 Endpoints (examples)
+
+### Create subscription
+`POST /api/subscriptions`
 ```json
 {
-  "customerId": "00000000-0000-0000-0000-000000000001",
+  "customerId": "11111111-1111-1111-1111-111111111111",
   "planCode": "PRO"
 }
 ```
+**200 OK**
+```json
+{ "message": "Subscription created and event published.", "subscriptionId": "..." }
+```
 
-**Response:**
+### Cancel subscription
+`POST /api/subscriptions/{subscriptionId}/cancel`  
+**200 OK**
+```json
+{ "message": "Subscription cancelled", "subscriptionId": "..." }
+```
+
+### Pay invoice
+`POST /api/payments`
 ```json
 {
-  "message": "Subscription created and event published",
-  "subscriptionId": "56b1e48b-7d42-4983-a5d2-0b6c62735d9c"
+  "invoiceId": "00000000-0000-0000-0000-000000000000",
+  "customerId": "11111111-1111-1111-1111-111111111111",
+  "subscriptionId": "put-created-subscriptionId-here",
+  "amount": 99,
+  "currency": "PLN",
+  "paymentMethod": "CARD",
+  "transactionId": "TX-123"
 }
 ```
+**200 OK**
+```json
+{ "message": "Payment received and event published.", "invoiceId": "..." }
+```
 
-This proves the HTTP → event → listener flow.
-
-### `GET /weatherforecast`
-Default ASP.NET Core template endpoint – useful to quickly check if the container responds on the mapped port.
-
----
-
-## 5. Architecture & patterns used
-
-- **Event-driven:** the API controller does not directly call “billing”. It only publishes an event. A background service (`BillingListener`) subscribes to that event.
-- **In-memory event bus:** `IEventBus` and `InMemoryEventBus` live in the shared project (`FlowOps.BuildingBlocks`). This lets all services publish/subscribe without hard-coding transport. Later this can be swapped for RabbitMQ.
-- **Separation of concerns:**
-  - **Controller** → accepts HTTP, maps DTO, publishes event.
-  - **Event** → `SubscriptionActivatedEvent` describes what happened.
-  - **Listener** → `BillingListener` subscribes on startup.
-  - **Handler** → `IBillingHandler` + `BillingHandler` do the actual “billing” work (for now: logging).
-- **SOLID-ish right now:**
-  - SRP: listener only wires the subscription, handler only handles the event.
-  - DIP: everything depends on abstractions (`IEventBus`, `IBillingHandler`).
-  - KISS: DTOs and controller are simple.
-- **Ready for microservices:** events have IDs/timestamps/version, there’s a shared building-blocks project, so in the future this can be split into:
-  - FlowOps.Subscriptions
-  - FlowOps.Billing
-  - FlowOps.Reporting
-  all listening to the same events.
-
----
-
-## 6. Reference Program.cs
-
-```csharp
-using FlowOps.BuildingBlocks.Messaging;
-using FlowOps.Services;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-
-// shared event bus
-builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
-
-// billing logic
-builder.Services.AddScoped<IBillingHandler, BillingHandler>();
-
-// background listener that subscribes to events
-builder.Services.AddHostedService<BillingListener>();
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
+### Get customer report
+`GET /api/reports/customers/{customerId}`  
+**200 OK**
+```json
 {
-    app.MapOpenApi();
+  "customerId": "11111111-1111-1111-1111-111111111111",
+  "activeSubscriptions": 1,
+  "totalInvoiced": 99,
+  "totalPaid": 99
 }
+```
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
+### Replay – snapshot
+`GET /api/replay/events`  
+**200 OK**
+```json
+[
+  { "type": "SubscriptionActivatedEvent", "id": "...", "occurredOn": "...", "version": 1 },
+  { "type": "InvoiceIssuedEvent", "id": "...", "occurredOn": "...", "version": 1 },
+  { "type": "InvoicePaidEvent", "id": "...", "occurredOn": "...", "version": 1 },
+  { "type": "SubscriptionCancelledEvent", "id": "...", "occurredOn": "...", "version": 1 }
+]
+```
+
+### Replay – rebuild reports
+`POST /api/replay/reports/rebuild`  
+**200 OK**
+```json
+{ "message": "Reports rebuilt from recorded events." }
 ```
 
 ---
 
-## 7. Next steps / TODO
+## 🧪 Plans / next steps
 
-- Extract event contracts to a separate project (e.g. `FlowOps.Contracts`) so multiple services can use the same event types.
-- Add a second consumer (e.g. `ReportingListener`) to show that multiple services can react to the same event.
-- Add persistence (EF Core) for subscriptions/invoices.
-- Replace `InMemoryEventBus` with a real broker (RabbitMQ) and run it via docker-compose.
-- Split the API into multiple services once the flow is stable.
+- Add **suspension / resume** state transitions
+- Persist subscriptions/invoices with EF Core
+- Replace in‑memory bus with RabbitMQ (docker‑compose)
+- Extract **event contracts** to a contracts package
+- Split solution into microservices (Subscriptions, Billing, Reporting)
+- Deterministic replay (sorting by `OccurredOn` if needed)
+
+---
+
+## 📝 Notes
+
+- `PlanCode` amounts in `BillingHandler`:
+  - `PRO` = 99, `BUSINESS` = 199, `ENTERPRISE` = 499, default = 49
+- Read‑model is intentionally **in‑memory** for MVP and replay demo.
+
+---
+
+## 🐳 Docker (optional now, ready for later)
+
+> You can keep running locally without Docker while learning. Below is a minimal path to containerize **FlowOps** when you’re ready.
+
+### Requirements
+- Docker Desktop (Windows): **Use WSL 2 based engine** *or* Hyper‑V with **Containers** feature.
+- Make sure the drive/folder with your repo (e.g. `D:\xxx\FlowOps`) is shared in Docker Desktop → **Settings → Resources → File sharing**.
+
+### Minimal Dockerfile (solution root)
+If you don’t already use the VS‑generated Dockerfile, a minimal image could look like this:
+
+```dockerfile
+# Dockerfile (at the solution root)
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+# copy csproj first to leverage docker layer caching
+COPY ./FlowOps/FlowOps.csproj ./FlowOps/
+COPY ./FlowOps.BuildingBlocks/FlowOps.BuildingBlocks.csproj ./FlowOps.BuildingBlocks/
+RUN dotnet restore ./FlowOps/FlowOps.csproj
+
+# copy the rest and publish
+COPY . .
+RUN dotnet publish ./FlowOps/FlowOps.csproj -c Release -o /app/publish
+
+FROM base AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENV ASPNETCORE_URLS=http://+:8080
+ENTRYPOINT ["dotnet", "FlowOps.dll"]
+```
+
+### Build & Run
+From the solution root:
+```bash
+docker build -t flowops:dev .
+docker run --rm -p 5056:8080 --name flowops flowops:dev
+```
+
+Now point Postman to:
+```
+http://localhost:5056
+```
+
+### Notes for VS Docker profile
+- If you prefer VS‑driven Docker debugging, choose the **Docker** profile in the run dropdown.
+- If you see errors like *“WSL is too old”* or *“Hyper‑V not enabled”*:
+  - Update WSL: `wsl --update` and consider `wsl --set-default-version 2`
+  - Or enable Hyper‑V & Containers (admin PowerShell):  
+    `Enable-WindowsOptionalFeature -Online -FeatureName $("Microsoft-Hyper-V","Containers") -All`
+- If you see *“mount denied… too many colons”* or volume issues, ensure the repo drive is shared in Docker Desktop (Settings → Resources → File sharing).
+
+### Compose / RabbitMQ (later)
+Once you split services, add `docker-compose.yml` with a broker (e.g. RabbitMQ) and swap the in‑memory bus for a real transport.
