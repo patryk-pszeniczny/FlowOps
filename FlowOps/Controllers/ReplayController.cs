@@ -10,12 +10,12 @@ namespace FlowOps.Controllers
     [Route("api/replay")]
     public class ReplayController : ControllerBase
     {
-        private readonly EventRecoder _recoder;
+        private readonly EventRecorder _recoder;
         private readonly IReportingHandler _reporting;
         private readonly IReportingStore _store;
 
         public ReplayController(
-            EventRecoder recoder, 
+            EventRecorder recoder, 
             IReportingHandler reporting, 
             IReportingStore store)
         {
@@ -41,12 +41,12 @@ namespace FlowOps.Controllers
         {
             if(_store is InMemoryReportingStore mem)
             {
-                var field = typeof(InMemoryReportingStore).GetField("_data", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                var dict = field?.GetValue(mem) as System.Collections.IDictionary;
-                dict?.Clear();
+                mem.Clear();
             }
-            foreach (var ev in _recoder.Snapshot())
+            var ordered = _recoder.Snapshot()
+                .OrderBy(e => e.OccurredOn);
+                //.ThenBy(e => e.Version);
+            foreach (var ev in ordered)
             {
                 switch (ev)
                 {

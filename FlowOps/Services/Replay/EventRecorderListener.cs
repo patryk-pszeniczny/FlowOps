@@ -4,16 +4,16 @@ using FlowOps.Events;
 
 namespace FlowOps.Services.Replay
 {
-    public sealed class EventRecoderListener : IHostedService
+    public sealed class EventRecorderListener : IHostedService
     {
         private readonly IEventBus _bus;
-        private readonly ILogger<EventRecoderListener> _logger;
-        private readonly EventRecoder _recorder;
+        private readonly ILogger<EventRecorderListener> _logger;
+        private readonly EventRecorder _recorder;
 
-        public EventRecoderListener(
+        public EventRecorderListener(
             IEventBus bus,
-            ILogger<EventRecoderListener> logger,
-            EventRecoder recorder)
+            ILogger<EventRecorderListener> logger,
+            EventRecorder recorder)
         {
             _bus = bus;
             _logger = logger;

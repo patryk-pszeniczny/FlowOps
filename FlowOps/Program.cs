@@ -26,8 +26,8 @@ builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepos
 builder.Services.AddScoped<SubscriptionCommandService>();
 
 //Replay
-builder.Services.AddSingleton<EventRecoder>();
-builder.Services.AddHostedService<EventRecoderListener>();
+builder.Services.AddSingleton<EventRecorder>();
+builder.Services.AddHostedService<EventRecorderListener>();
 
 
 var app = builder.Build();

@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 
 namespace FlowOps.Services.Replay
 {
-    public sealed class EventRecoder
+    public sealed class EventRecorder
     {
         private readonly ConcurrentQueue<IntegrationEvent> _events = new();
 

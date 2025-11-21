@@ -37,5 +37,9 @@ namespace FlowOps.Reports.Stores
                 TotalPaid = 0
             });
         }
+        public void Clear()
+        {
+            _data.Clear();
+        }
     }
 }
