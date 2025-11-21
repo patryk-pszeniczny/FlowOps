@@ -6,5 +6,7 @@
         public int ActiveSubscriptions { get; set; }
         public decimal TotalInvoiced { get; set; }
         public decimal TotalPaid { get; set; }
+
+        public HashSet<Guid> ActiveSubscriptionIds { get; } = new();
     }
 }

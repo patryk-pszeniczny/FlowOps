@@ -22,5 +22,13 @@ namespace FlowOps.Controllers
             }
             return NotFound();
         }
+        [HttpGet("customers/{custmerId:guid}/active-subscriptions")]
+        public IActionResult GetActiveSubscriptionIds(Guid customerId)
+        {
+            var report = _store.GetOrAdd(customerId);
+            var ids = report.ActiveSubscriptionIds.OrderBy(id => id).ToArray();
+            return Ok(ids);
+        }
+        }
     }
 }

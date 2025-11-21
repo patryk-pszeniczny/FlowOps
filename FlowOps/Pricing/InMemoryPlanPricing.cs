@@ -16,13 +16,13 @@
         {
             if (string.IsNullOrWhiteSpace(planCode))
             {
-                throw new InvalidOperationException("Plan code is required.");
+                throw new ArgumentException("Plan code is required. ", nameof(planCode));
             }
             if (_prices.TryGetValue(planCode, out var price))
             {
                 return price;
             }
-            throw new InvalidOperationException($"Unknown plan code: '{planCode}'.");
+            throw new ArgumentException($"Unknown plan code: '{planCode}'.", nameof(planCode));
         }
     }
 }

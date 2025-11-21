@@ -19,6 +19,10 @@
             {
                 await WriteProblem(contex, StatusCodes.Status404NotFound, "Not Found", ex.Message);
             }
+            catch (ArgumentException ex)
+            {
+                await WriteProblem(contex, StatusCodes.Status400BadRequest, "Bad Request", ex.Message);
+            }
             catch (InvalidOperationException ex)
             {
                 await WriteProblem(contex, StatusCodes.Status409Conflict, "Conflict", ex.Message);

@@ -1,6 +1,7 @@
 ﻿using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Events;
+using FlowOps.Pricing;
 
 namespace FlowOps.Application.Subscriptions
 {
@@ -9,17 +10,21 @@ namespace FlowOps.Application.Subscriptions
         private readonly ISubscriptionRepository _repository;
         private readonly IEventBus _eventBus;
         private readonly ILogger<SubscriptionCommandService> _logger;
+        private readonly IPlanPricing _pricing;
         public SubscriptionCommandService(
             ISubscriptionRepository repository, 
             IEventBus eventBus, 
-            ILogger<SubscriptionCommandService> logger)
+            ILogger<SubscriptionCommandService> logger,
+            IPlanPricing pricing)
         {
             _repository = repository;
             _eventBus = eventBus;
             _logger = logger;
+            _pricing = pricing;
         }
         public async Task<Guid> CreateAsync(Guid customerId, string planCode, DateTime utcNow, CancellationToken ct = default)
         {
+            _ = _pricing.GetPrice(planCode); //Validacja
             var subscription = Subscription.Create(customerId, planCode);
             var ev = subscription.Activate(utcNow);
 
