@@ -23,9 +23,10 @@ namespace FlowOps.Services.Replay
         {
             _bus.Subscribe<SubscriptionActivatedEvent>(Handle);
             _bus.Subscribe<SubscriptionCancelledEvent>(Handle);
+            _bus.Subscribe<SubscriptionSuspendedEvent>(Handle);
+            _bus.Subscribe<SubscriptionResumedEvent>(Handle);
             _bus.Subscribe<InvoiceIssuedEvent>(Handle);
             _bus.Subscribe<InvoicePaidEvent>(Handle);
-
             _logger.LogInformation("EventRecoderListener subscribed to integration events");
             return Task.CompletedTask;
         }
@@ -38,6 +39,8 @@ namespace FlowOps.Services.Replay
         private Task Handle(SubscriptionCancelledEvent ev) => Append(ev);
         private Task Handle(InvoiceIssuedEvent ev) => Append(ev);
         private Task Handle(InvoicePaidEvent ev) => Append(ev);
+        private Task Handle(SubscriptionSuspendedEvent ev) => Append(ev);
+        private Task Handle(SubscriptionResumedEvent ev) => Append(ev);
         private Task Append(IntegrationEvent ev)
         {
             _recorder.Append(ev);

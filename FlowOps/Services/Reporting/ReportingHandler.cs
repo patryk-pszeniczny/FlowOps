@@ -20,7 +20,6 @@ namespace FlowOps.Services.Reporting
                 ev.CustomerId, snapshot.ActiveSubscriptions);
             return Task.CompletedTask;
         }
-
         public Task On(InvoiceIssuedEvent ev, CancellationToken cancellationToken = default)
         {
             var report = _store.GetOrAdd(ev.CustomerId);
@@ -32,7 +31,6 @@ namespace FlowOps.Services.Reporting
                 ev.CustomerId, ev.Amount, ev.Currency, report.TotalInvoiced);
             return Task.CompletedTask;
         }
-
         public Task On(InvoicePaidEvent ev, CancellationToken cancellationToken = default)
         {
            var report = _store.GetOrAdd(ev.CustomerId);
@@ -44,7 +42,6 @@ namespace FlowOps.Services.Reporting
                 ev.CustomerId, ev.Amount, ev.Currency, report.TotalPaid);
             return Task.CompletedTask;
         }
-
         public Task On(SubscriptionCancelledEvent ev, CancellationToken cancellationToken = default)
         {
             var report = _store.GetOrAdd(ev.CustomerId);
@@ -56,6 +53,31 @@ namespace FlowOps.Services.Reporting
                 "Report cancelled updated for CustomerId: {CustomerId}, ActiveSubscriptions={Active}",
                 ev.CustomerId, report.ActiveSubscriptions
             );
+            return Task.CompletedTask;
+        }
+        public Task On(SubscriptionSuspendedEvent ev, CancellationToken cancellationToken = default)
+        {
+            var report = _store.GetOrAdd(ev.CustomerId);
+
+            if(report.ActiveSubscriptions > 0)
+            {
+                report.ActiveSubscriptions -= 1;
+            }
+            _logger.LogInformation(
+                "Report suspended updated for CustomerId: {CustomerId}, ActiveSubscriptions={Active}",
+                ev.CustomerId, report.ActiveSubscriptions
+            );
+            return Task.CompletedTask;
+        }
+        public Task On(SubscriptionResumedEvent ev, CancellationToken cancellationToken = default)
+        {
+            var report = _store.GetOrAdd(ev.CustomerId);
+
+            report.ActiveSubscriptions += 1;
+
+            _logger.LogInformation(
+                "Report resumed updated for CustomerId: {CustomerId}, ActiveSubscriptions={Active}",
+                ev.CustomerId, report.ActiveSubscriptions);
             return Task.CompletedTask;
         }
     }

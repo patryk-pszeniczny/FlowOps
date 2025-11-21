@@ -46,8 +46,8 @@ namespace FlowOps.Controllers
                 mem.Clear();
             }
             var ordered = _recorder.Snapshot()
-                .OrderBy(e => e.OccurredOn);
-                //.ThenBy(e => e.Version);
+                .OrderBy(e => e.OccurredOn)
+                .ThenBy(e => e.Version);
             foreach (var ev in ordered)
             {
                 switch (ev)
@@ -63,6 +63,12 @@ namespace FlowOps.Controllers
                         break;
                     case InvoicePaidEvent p:
                         await _reporting.On(p, ct);
+                        break;
+                    case SubscriptionSuspendedEvent s:
+                        await _reporting.On(s, ct);
+                        break;
+                    case SubscriptionResumedEvent r:
+                        await _reporting.On(r, ct);
                         break;
                 }
             }

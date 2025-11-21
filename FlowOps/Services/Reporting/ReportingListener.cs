@@ -24,6 +24,9 @@ namespace FlowOps.Services.Reporting
             _eventBus.Subscribe<InvoiceIssuedEvent>(HandleInvoice);
             _eventBus.Subscribe<InvoicePaidEvent>(HandlePaid);
             _eventBus.Subscribe<SubscriptionCancelledEvent>(HandleCancelled);
+            _eventBus.Subscribe<SubscriptionResumedEvent>(HandleResumed);
+            _eventBus.Subscribe<SubscriptionSuspendedEvent>(HandleSuspended);
+
             _logger.LogInformation("ReportingListener subscribed to SubscriptionActivatedEvent");
             return Task.CompletedTask;
         }
@@ -37,6 +40,8 @@ namespace FlowOps.Services.Reporting
         private Task HandleInvoice(InvoiceIssuedEvent ev) => WithHandler(h => h.On(ev));
         private Task HandlePaid(InvoicePaidEvent ev) => WithHandler(h => h.On(ev));
         private Task HandleCancelled(SubscriptionCancelledEvent ev) => WithHandler(h => h.On(ev));
+        private Task HandleResumed(SubscriptionResumedEvent ev) => WithHandler(h => h.On(ev));
+        private Task HandleSuspended(SubscriptionSuspendedEvent ev) => WithHandler(h => h.On(ev));
 
         private async Task WithHandler(Func<IReportingHandler, Task> action)
         {
