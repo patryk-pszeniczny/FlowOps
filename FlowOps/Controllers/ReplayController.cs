@@ -10,31 +10,33 @@ namespace FlowOps.Controllers
     [Route("api/replay")]
     public class ReplayController : ControllerBase
     {
-        private readonly EventRecorder _recoder;
+        private readonly EventRecorder _recorder;
         private readonly IReportingHandler _reporting;
         private readonly IReportingStore _store;
 
         public ReplayController(
-            EventRecorder recoder, 
+            EventRecorder recorder, 
             IReportingHandler reporting, 
             IReportingStore store)
         {
-            _recoder = recoder;
+            _recorder = recorder;
             _reporting = reporting;
             _store = store;
         }
         [HttpGet("events")]
         public ActionResult<IEnumerable<object>> GetEvents()
         {
-            var snapshot = _recoder.Snapshot();
-            var snaped = snapshot.Select(e => new
-            {
-                type = e.GetType().Name,
-                e.Id,
-                e.OccurredOn,
-                e.Version
-            });
-            return Ok(snaped);
+            var snapshot = _recorder.Snapshot()
+                .OrderBy(e => e.OccurredOn)
+                .ThenBy(e => e.Version)
+                .Select(e => new
+                {
+                    type = e.GetType().Name,
+                    e.Id,
+                    e.OccurredOn,
+                    e.Version
+                });
+            return Ok(snapshot);
         }
         [HttpPost("reports/rebuild")]
         public async Task<IActionResult> RebuildReports(CancellationToken ct)
@@ -43,7 +45,7 @@ namespace FlowOps.Controllers
             {
                 mem.Clear();
             }
-            var ordered = _recoder.Snapshot()
+            var ordered = _recorder.Snapshot()
                 .OrderBy(e => e.OccurredOn);
                 //.ThenBy(e => e.Version);
             foreach (var ev in ordered)
