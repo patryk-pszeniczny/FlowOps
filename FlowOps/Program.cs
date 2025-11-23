@@ -7,6 +7,7 @@ using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
+using FlowOps.Infrastructure.Idempotency;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,9 @@ builder.Services.AddHostedService<EventRecorderListener>();
 
 //Pricing
 builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
+
+//Idempotency
+builder.Services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();
 
 
 var app = builder.Build();

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Application.Subscriptions;
 using FlowOps.Contracts.Request;
+using FlowOps.Infrastructure.Idempotency;
 
 namespace FlowOps.Controllers
 {
@@ -14,14 +15,31 @@ namespace FlowOps.Controllers
     public class SubscriptionsController : ControllerBase
     {
         private readonly SubscriptionCommandService _service;
-        public SubscriptionsController(SubscriptionCommandService service)
+        private readonly IIdempotencyStore _idempotency;
+        public SubscriptionsController(SubscriptionCommandService service, IIdempotencyStore idempotency)
         {
             _service = service;
+            _idempotency = idempotency;
         }
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSubscriptionRequest request)
         {
+            var idempotencyKey = Request.Headers.TryGetValue("Idempotency-Key", out var vals) ? vals.ToString() : null;
+
+            if (!string.IsNullOrWhiteSpace(idempotencyKey) && _idempotency.TryGet(idempotencyKey, out var existringId))
+            {
+                return Ok(new
+                {
+                    message = "Subscription already created (idempotent).",
+                    subscriptionId = existringId
+                });
+            }
+            
             var id = await _service.CreateAsync(request.CustomerId, request.PlanCode, DateTime.UtcNow);
+            if(!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                _idempotency.Set(idempotencyKey, id);
+            }
             return Ok(
                 new
                 {
