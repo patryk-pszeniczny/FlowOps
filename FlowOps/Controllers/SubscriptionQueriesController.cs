@@ -1,5 +1,7 @@
-﻿using FlowOps.Contracts.Response;
+﻿using FlowOps.Contracts.Item;
+using FlowOps.Contracts.Response;
 using FlowOps.Domain.Subscriptions;
+using FlowOps.Reports.Stores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,9 +12,12 @@ namespace FlowOps.Controllers
     public class SubscriptionQueriesController : ControllerBase
     {
         private readonly ISubscriptionRepository _repo;
-        public SubscriptionQueriesController(ISubscriptionRepository repo)
+        private readonly IReportingStore _store;
+        public SubscriptionQueriesController(ISubscriptionRepository repo,
+            IReportingStore store)
         {
             _repo = repo;
+            _store = store;
         }
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
@@ -28,6 +33,24 @@ namespace FlowOps.Controllers
                 subscription.Status.ToString()
             );
             return Ok(response);
+        }
+        [HttpGet("by-customer/{customerId:guid}")]
+        public ActionResult<IEnumerable<SubscriptionListItem>> GetByCustomerId(Guid customerId)
+        {
+            var report = _store.GetOrAdd(customerId);
+
+            var items = report.ActiveSubscriptionIds
+                .Select(id => _repo.TryGet(id, out var sub) ? sub : null)
+                .Where(sub => sub is not null)
+                .Select(sub => new SubscriptionListItem
+                (
+                    sub!.Id,
+                    sub.PlanCode,
+                    sub.Status.ToString()
+                ))
+                .OrderBy(x => x.PlanCode)
+                .ToList();
+            return Ok(items);
         }
     }
 }
