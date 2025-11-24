@@ -8,6 +8,8 @@ using FlowOps.Services.Replay;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
 using FlowOps.Infrastructure.Idempotency;
+using FlowOps.Infrastructure.Sql;
+using FlowOps.Services.Reporting.Sql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +41,9 @@ builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
 //Idempotency
 builder.Services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();
 
+//Database
+builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
+builder.Services.AddHostedService<SqlReportingProjector>();
 
 var app = builder.Build();
 
