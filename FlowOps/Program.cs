@@ -12,6 +12,7 @@ using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
 using FlowOps.Services.Reporting;
 using FlowOps.Services.Reporting.Sql;
+using FlowOps.Services.Subscriptions.Sql;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using System.Text.Json;
 
@@ -34,6 +35,7 @@ builder.Services.AddHostedService<ReportingListener>();
 //Subscriptions
 builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
 builder.Services.AddScoped<SubscriptionCommandService>();
+builder.Services.AddHostedService<SqlSubscriptionsProjector>();
 
 //Replay
 builder.Services.AddSingleton<EventRecorder>();
@@ -60,7 +62,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["ASPNETCORE_HTTPS_PORTS"]))
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthorization();
 app.UseMiddleware<ProblemDetailsMiddleware>();
 app.MapControllers();
