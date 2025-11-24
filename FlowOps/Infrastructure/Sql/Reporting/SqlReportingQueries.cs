@@ -26,9 +26,9 @@ namespace FlowOps.Infrastructure.Sql.Reporting
                 FROM 
                     dbo.CustomerReports
                 WHERE 
-                    CustomerId = @CustomerId";
+                    CustomerId = @cid";
             command.Parameters.Add(
-                new SqlParameter("@CustomerId", SqlDbType.UniqueIdentifier) 
+                new SqlParameter("@cid", SqlDbType.UniqueIdentifier) 
                 { 
                     Value = customerId 
                 });
@@ -57,11 +57,11 @@ namespace FlowOps.Infrastructure.Sql.Reporting
                 FROM 
                     dbo.ActiveSubscriptionIds
                 WHERE 
-                    CustomerId = @CustomerId
+                    CustomerId = @cid
                 ORDER BY
                     SubscriptionId;";
             command.Parameters.Add(
-                new SqlParameter("@CustomerId", SqlDbType.UniqueIdentifier)
+                new SqlParameter("@cid", SqlDbType.UniqueIdentifier)
                 {
                     Value = customerId
                 });

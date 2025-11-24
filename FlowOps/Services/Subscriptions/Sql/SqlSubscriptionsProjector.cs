@@ -40,10 +40,10 @@ namespace FlowOps.Services.Subscriptions.Sql
         {
             await using var connection = await _connection.CreateOpenAsync();
             await ExecAsync(connection, @"
-            IF EXISTS (SELECT 1 FROM dbo.Subscriptions WHERE SubscriptionId = @subscriptionId)
+            IF EXISTS (SELECT 1 FROM dbo.Subscriptions WHERE SubscriptionId = @sid)
             BEGIN
                 UPDATE dbo.Subscriptions
-                SET CustomerId = @customerId,
+                SET CustomerId = @cid,
                     PlanCode   = @plan,
                     ActivatedAt= COALESCE(ActivatedAt, @ts),
                     SuspendedAt= NULL,
@@ -54,12 +54,12 @@ namespace FlowOps.Services.Subscriptions.Sql
             ELSE
             BEGIN
                 INSERT INTO dbo.Subscriptions (SubscriptionId, CustomerId, PlanCode, Status, ActivatedAt)
-                VALUES (@subscriptionId, @custmerId, @plan, N'Active', @ts);
+                VALUES (@sid, @cid, @plan, N'Active', @ts);
             END",
             p =>
             {
-                p.Add(new SqlParameter("@subscriptionId", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
-                p.Add(new SqlParameter("@customerId", SqlDbType.UniqueIdentifier) { Value = ev.CustomerId });
+                p.Add(new SqlParameter("@sid", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
+                p.Add(new SqlParameter("@cid", SqlDbType.UniqueIdentifier) { Value = ev.CustomerId });
                 p.Add(new SqlParameter("@plan", SqlDbType.NVarChar, 100) { Value = ev.PlanCode });
                 p.Add(new SqlParameter("@ts", SqlDbType.DateTime2) { Value = ev.OccurredOn });
             });
@@ -71,10 +71,10 @@ namespace FlowOps.Services.Subscriptions.Sql
             UPDATE dbo.Subscriptions
             SET Status      = N'Suspended',
                 SuspendedAt = COALESCE(SuspendedAt, @ts)
-            WHERE SubscriptionId = @subscriptionId;",
+            WHERE SubscriptionId = @sid;",
             p =>
             {
-                p.Add(new SqlParameter("@subscriptionId", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
+                p.Add(new SqlParameter("@sid", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
                 p.Add(new SqlParameter("@ts", SqlDbType.DateTime2) { Value = ev.OccurredOn });
             });
         }
@@ -85,10 +85,10 @@ namespace FlowOps.Services.Subscriptions.Sql
             UPDATE dbo.Subscriptions
             SET Status     = N'Active',
                 ResumedAt  = COALESCE(ResumedAt, @ts),
-            WHERE SubscriptionId = @subscriptionId;",
+            WHERE SubscriptionId = @sid;",
             p =>
             {
-                p.Add(new SqlParameter("@subscriptionId", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
+                p.Add(new SqlParameter("@sid", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
                 p.Add(new SqlParameter("@ts", SqlDbType.DateTime2) { Value = ev.OccurredOn });
             });
         }
@@ -99,10 +99,10 @@ namespace FlowOps.Services.Subscriptions.Sql
             UPDATE dbo.Subscriptions
             SET Status      = N'Cancelled',
                 CancelledAt = @ts
-            WHERE SubscriptionId = @subscriptionId;",
+            WHERE SubscriptionId = @sid;",
             p =>
             {
-                p.Add(new SqlParameter("@subscriptionId", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
+                p.Add(new SqlParameter("@sid", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
                 p.Add(new SqlParameter("@ts", SqlDbType.DateTime2) { Value = ev.OccurredOn });
             });
         }
