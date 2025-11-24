@@ -24,6 +24,12 @@ namespace FlowOps.Services.Reporting.Sql
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _bus.Subscribe<SubscriptionActivatedEvent>(OnActivaed);
+            _bus.Subscribe<SubscriptionCancelledEvent>(OnCancelled);
+            _bus.Subscribe<SubscriptionSuspendedEvent>(OnSuspended);
+            _bus.Subscribe<SubscriptionResumedEvent>(OnResumed);
+            _bus.Subscribe<InvoiceIssuedEvent>(OnInvoiced);
+            _bus.Subscribe<InvoicePaidEvent>(OnPaid);
+
 
             _logger.LogInformation("SqlReportingProjector started (subscribed to reporing events).");
             return Task.CompletedTask;
