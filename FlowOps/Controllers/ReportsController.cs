@@ -1,4 +1,6 @@
-﻿using FlowOps.Reports.Models;
+﻿using FlowOps.Contracts.Response;
+using FlowOps.Infrastructure.Sql.Reporting;
+using FlowOps.Reports.Models;
 using FlowOps.Reports.Stores;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,6 +30,19 @@ namespace FlowOps.Controllers
             var report = _store.GetOrAdd(customerId);
             var ids = report.ActiveSubscriptionIds.OrderBy(id => id).ToArray();
             return Ok(ids);
+        }
+        [HttpGet("sql/customers/{customerId:guid}")]
+        public async Task<ActionResult<CustomerReportSqlResponse>> GetCustomerReportSql(
+            Guid customerId,
+            [FromServices] ISqlReportingQueries queries,
+            CancellationToken ct)
+        {
+            var result = await queries.GetCustomerReportAsync(customerId, ct);
+            if(result is null)
+            {
+                throw new KeyNotFoundException($"Customer {customerId} not found in SQL report.");
+            }
+            return Ok(result);
         }
     }
 }
