@@ -11,6 +11,7 @@ using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Sql;
 using FlowOps.Services.Reporting.Sql;
 using FlowOps.Infrastructure.Sql.Reporting;
+using FlowOps.Infrastructure.Health;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,9 @@ builder.Services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();
 builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddHostedService<SqlReportingProjector>();
 builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+
+//DataBase - Health Check
+builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
 
 var app = builder.Build();
 
