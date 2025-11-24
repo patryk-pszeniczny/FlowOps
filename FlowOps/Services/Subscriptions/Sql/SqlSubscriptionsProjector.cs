@@ -49,7 +49,7 @@ namespace FlowOps.Services.Subscriptions.Sql
                     SuspendedAt= NULL,
                     ResumedAt  = NULL,
                     CancelledAt= NULL
-                WHERE SubscriptionId = @subscriptionId;
+                WHERE SubscriptionId = @sid;
             END
             ELSE
             BEGIN
