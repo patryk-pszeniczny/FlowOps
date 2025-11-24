@@ -1,17 +1,19 @@
-using FlowOps.BuildingBlocks.Messaging;
-using FlowOps.Reports.Stores;
-using FlowOps.Services.Reporting;
-using FlowOps.Domain.Subscriptions;
 using FlowOps.Application.Subscriptions;
-using FlowOps.Services.Billing;
-using FlowOps.Services.Replay;
-using FlowOps.Middleware;
-using FlowOps.Pricing;
+using FlowOps.BuildingBlocks.Messaging;
+using FlowOps.Domain.Subscriptions;
+using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Sql;
-using FlowOps.Services.Reporting.Sql;
 using FlowOps.Infrastructure.Sql.Reporting;
-using FlowOps.Infrastructure.Health;
+using FlowOps.Middleware;
+using FlowOps.Pricing;
+using FlowOps.Reports.Stores;
+using FlowOps.Services.Billing;
+using FlowOps.Services.Replay;
+using FlowOps.Services.Reporting;
+using FlowOps.Services.Reporting.Sql;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,5 +65,27 @@ app.UseAuthorization();
 app.UseMiddleware<ProblemDetailsMiddleware>();
 app.MapControllers();
 app.MapHealthChecks("/healthz");
+app.MapHealthChecks("/healthz/details", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            totalDurationMs = report.TotalDuration.TotalMilliseconds,
+            entries = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                durationMs = e.Value.Duration.TotalMilliseconds,
+                exception = e.Value.Exception?.Message
+            })
+        };
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        await context.Response.WriteAsync(json);
+    }
+});
 
 app.Run();
