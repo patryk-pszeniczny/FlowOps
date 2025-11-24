@@ -44,5 +44,14 @@ namespace FlowOps.Controllers
             }
             return Ok(result);
         }
+        [HttpGet("sql/customers/{customerId:guid}/active-subscriptions")]
+        public async Task<ActionResult<IEnumerable<Guid>>> GetActiveSubscriptionIdsSql(
+            Guid customerId,
+            [FromServices] ISqlReportingQueries queries,
+            CancellationToken ct)
+        {
+            var ids = await queries.GetActiveSubscriptionIdsAsync(customerId, ct);
+            return Ok(ids);
+        }
     }
 }
