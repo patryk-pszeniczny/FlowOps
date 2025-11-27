@@ -73,5 +73,57 @@ namespace FlowOps.Infrastructure.Sql.Reporting
             }
             return result;
         }
+
+        public async Task<IReadOnlyList<SubscriptionSqlResponse>> GetByCustomerAsync(Guid customerId, string? status = null, CancellationToken ct = default)
+        {
+            var list = new List<SubscriptionSqlResponse>();
+
+            await using var connection = await _connectionFactory.CreateOpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandType = CommandType.Text;
+
+            command.CommandText = @"
+                SELECT 
+                    SubscriptionId,
+                    CustomerId,
+                    PlanCode,
+                    Status,
+                    ActivatedAt,
+                    SuspendedAt,
+                    ResumedAt,
+                    CancelledAt
+                FROM 
+                    dbo.Subscriptions
+                WHERE 
+                    CustomerId = @cid AND (@st IS NULL OR Status = @st)
+                ORDER BY ActivatedAt DESC;";
+            command.Parameters.Add(
+                new SqlParameter("@cid", SqlDbType.UniqueIdentifier)
+                {
+                    Value = customerId
+                });
+            command.Parameters.Add(
+                new SqlParameter("@st", SqlDbType.NVarChar, 16)
+                {
+                    Value = (object?)status ?? DBNull.Value
+                });
+
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while(await reader.ReadAsync(ct))
+            {
+                list.Add(new SubscriptionSqlResponse
+                (
+                    reader.GetGuid(0), // SubscriptionId
+                    reader.GetGuid(1), // CustomerId
+                    reader.GetString(2), // PlanCode
+                    reader.GetString(3), // Status
+                    reader.GetDateTime(4), // ActivatedAt
+                    reader.IsDBNull(5) ? null : reader.GetDateTime(5), // SuspendedAt
+                    reader.IsDBNull(6) ? null : reader.GetDateTime(6), // ResumedAt
+                    reader.IsDBNull(7) ? null : reader.GetDateTime(7) // CancelledAt
+                ));
+            }
+            return list;
+        }
     }
 }

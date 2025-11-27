@@ -58,10 +58,22 @@ namespace FlowOps.Services.Subscriptions.Sql
             END",
             p =>
             {
-                p.Add(new SqlParameter("@sid", SqlDbType.UniqueIdentifier) { Value = ev.SubscriptionId });
-                p.Add(new SqlParameter("@cid", SqlDbType.UniqueIdentifier) { Value = ev.CustomerId });
-                p.Add(new SqlParameter("@plan", SqlDbType.NVarChar, 100) { Value = ev.PlanCode });
-                p.Add(new SqlParameter("@ts", SqlDbType.DateTime2) { Value = ev.OccurredOn });
+                p.Add(new SqlParameter("@sid", SqlDbType.UniqueIdentifier) 
+                { 
+                    Value = ev.SubscriptionId 
+                });
+                p.Add(new SqlParameter("@cid", SqlDbType.UniqueIdentifier) 
+                { 
+                    Value = ev.CustomerId 
+                });
+                p.Add(new SqlParameter("@plan", SqlDbType.NVarChar, 100) 
+                {
+                    Value = ev.PlanCode 
+                });
+                p.Add(new SqlParameter("@ts", SqlDbType.DateTime2) 
+                { 
+                    Value = ev.OccurredOn 
+                });
             });
         }
         private async Task OnSuspended(SubscriptionSuspendedEvent ev)

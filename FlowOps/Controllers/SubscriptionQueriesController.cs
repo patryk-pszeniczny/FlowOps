@@ -1,6 +1,7 @@
 ﻿using FlowOps.Contracts.Item;
 using FlowOps.Contracts.Response;
 using FlowOps.Domain.Subscriptions;
+using FlowOps.Infrastructure.Sql.Reporting;
 using FlowOps.Reports.Stores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -50,6 +51,25 @@ namespace FlowOps.Controllers
                 ))
                 .OrderBy(x => x.PlanCode)
                 .ToList();
+            return Ok(items);
+        }
+        [HttpGet("sql/by-customer/{customerId:guid}")]
+        public async Task<ActionResult<IEnumerable<SubscriptionSqlResponse>>> GetByCustomerSql(
+            Guid customerId,
+            [FromQuery] string? status,
+            [FromServices] ISqlReportingQueries queries,
+            CancellationToken ct)
+        {
+            if(!string.IsNullOrWhiteSpace(status))
+            {
+                var allowedStatus = status.Trim();
+                if(allowedStatus is not ("Active" or "Suspended" or "Cancelled"))
+                {
+                    return BadRequest("Invalid status filter. Allowed values are: Active, Suspended, Cancelled.");
+                }
+                status = allowedStatus;
+            }
+            var items = await queries.GetByCustomerAsync(customerId, status, ct);
             return Ok(items);
         }
     }
