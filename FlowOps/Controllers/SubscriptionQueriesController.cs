@@ -1,5 +1,6 @@
 ﻿using FlowOps.Contracts.Item;
 using FlowOps.Contracts.Response;
+using FlowOps.Contracts.Result;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Infrastructure.Sql.Reporting;
 using FlowOps.Reports.Stores;
@@ -84,6 +85,60 @@ namespace FlowOps.Controllers
                throw new KeyNotFoundException($"Subscription {subscriptionId} not found in SQL.");
             }
             return Ok(item);
+        }
+        [HttpGet("sql/by-customer/{customerId:guid}/paged")]
+        public async Task<ActionResult<PagedResult<SubscriptionSqlResponse>>> GetByCustomerSqlPaged(
+            Guid customerId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? orderBy = null,
+            [FromQuery] string? orderDirection = null,
+            [FromQuery] string? status = null,
+            [FromServices] ISqlReportingQueries queries = null!,
+            CancellationToken ct = default)
+        {
+            if(page <= 0)
+            {
+                return BadRequest("Page number must be greater than 0.");
+            }
+            if(pageSize <= 0 || pageSize > 200)
+            {
+                return BadRequest("Page size must be between 1 and 200.");
+            }
+            if (!string.IsNullOrWhiteSpace(orderBy)){
+                var order = orderBy.Trim();
+                if(order is not ("ActivatedAt" or "Status"))
+                {
+                    return BadRequest("Invalid orderBy value. Allowed values are: ActivatedAt, Status.");
+                }
+                orderBy = order;
+            }
+            if (!string.IsNullOrWhiteSpace(orderDirection)){
+                var direction = orderDirection.Trim().ToUpperInvariant();
+                if(direction is not ("asc" or "desc"))
+                {
+                    return BadRequest("Invalid orderDirection value. Allowed values are: asc, desc.");
+                }
+                orderDirection = direction;
+            }
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var statusTrimmed = status.Trim();
+                if (statusTrimmed is not ("Active" or "Suspended" or "Cancelled"))
+                {
+                    return BadRequest("Invalid status filter. Allowed values are: Active, Suspended, Cancelled.");
+                }
+                status = statusTrimmed;
+            }
+            var pagedResult = await queries.GetByCustomerPagedAsync(
+                customerId,
+                page,
+                pageSize,
+                orderBy,
+                orderDirection,
+                status,
+                ct);
+            return Ok(pagedResult);
         }
     }
 }
