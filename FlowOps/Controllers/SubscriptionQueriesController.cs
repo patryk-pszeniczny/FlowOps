@@ -23,7 +23,7 @@ namespace FlowOps.Controllers
         [HttpGet("{id:guid}")]
         public IActionResult GetById(Guid id)
         {
-            if(!_repo.TryGet(id, out var subscription) || subscription is null)
+            if (!_repo.TryGet(id, out var subscription) || subscription is null)
             {
                 throw new KeyNotFoundException($"Subscription {id} not found.");
             }
@@ -60,10 +60,10 @@ namespace FlowOps.Controllers
             [FromServices] ISqlReportingQueries queries,
             CancellationToken ct)
         {
-            if(!string.IsNullOrWhiteSpace(status))
+            if (!string.IsNullOrWhiteSpace(status))
             {
                 var allowedStatus = status.Trim();
-                if(allowedStatus is not ("Active" or "Suspended" or "Cancelled"))
+                if (allowedStatus is not ("Active" or "Suspended" or "Cancelled"))
                 {
                     return BadRequest("Invalid status filter. Allowed values are: Active, Suspended, Cancelled.");
                 }
@@ -71,6 +71,19 @@ namespace FlowOps.Controllers
             }
             var items = await queries.GetByCustomerAsync(customerId, status, ct);
             return Ok(items);
+        }
+        [HttpGet("sql/{subscriptionId:guid}")]
+        public async Task<ActionResult<SubscriptionSqlResponse>> GetByIdSql(
+            Guid subscriptionId,
+            [FromServices] ISqlReportingQueries queries,
+            CancellationToken ct)
+        {
+            var item = await queries.GetSubscriptionByIdAsync(subscriptionId, ct);
+            if (item is null)
+            {
+               throw new KeyNotFoundException($"Subscription {subscriptionId} not found in SQL.");
+            }
+            return Ok(item);
         }
     }
 }

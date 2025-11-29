@@ -125,5 +125,45 @@ namespace FlowOps.Infrastructure.Sql.Reporting
             }
             return list;
         }
+        public async Task<SubscriptionSqlResponse?> GetSubscriptionByIdAsync(Guid subscriptionId, CancellationToken ct = default)
+        {
+            await using var connection = await _connectionFactory.CreateOpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandType = CommandType.Text;
+            command.CommandText = @"
+                SELECT 
+                    SubscriptionId,
+                    CustomerId,
+                    PlanCode,
+                    Status,
+                    ActivatedAt,
+                    SuspendedAt,
+                    ResumedAt,
+                    CancelledAt
+                FROM 
+                    dbo.Subscriptions
+                WHERE 
+                    SubscriptionId = @sid;";
+            command.Parameters.Add(new SqlParameter("@sid", SqlDbType.UniqueIdentifier)
+                {
+                    Value = subscriptionId
+                });
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            if(!await reader.ReadAsync(ct))
+            {
+                return null;
+            }
+            return new SubscriptionSqlResponse
+            (
+                reader.GetGuid(0), // SubscriptionId
+                reader.GetGuid(1), // CustomerId
+                reader.GetString(2), // PlanCode
+                reader.GetString(3), // Status
+                reader.GetDateTime(4), // ActivatedAt
+                reader.IsDBNull(5) ? null : reader.GetDateTime(5), // SuspendedAt
+                reader.IsDBNull(6) ? null : reader.GetDateTime(6), // ResumedAt
+                reader.IsDBNull(7) ? null : reader.GetDateTime(7) // CancelledAt
+            );
+        }
     }
 }
