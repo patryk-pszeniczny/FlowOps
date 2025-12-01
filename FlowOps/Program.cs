@@ -22,7 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+//builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
 builder.Services.AddSingleton<IReportingStore, InMemoryReportingStore>();
 
 //billing
@@ -45,13 +45,11 @@ builder.Services.AddHostedService<EventRecorderListener>();
 //Pricing
 builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
 
-//Idempotency
-builder.Services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
-
 //Database
 builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddHostedService<SqlReportingProjector>();
 builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+
 //EF Core DbContext
 builder.Services.AddDbContext<FlowOpsDbContext>(options =>
 {
@@ -64,9 +62,25 @@ builder.Services.AddDbContext<FlowOpsDbContext>(options =>
     options.UseSqlServer(connectionString);
 });
 
+//Idempotency
+builder.Services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
+
+//Event Store (SQL, EF Core)
+builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStore>();
 
 //DataBase - Health Check
 builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
+
+//Event Bus with Event Store decorator
+builder.Services.AddSingleton<InMemoryEventBus>();
+
+builder.Services.AddSingleton<IEventBus>(sp =>
+{
+    var innerBus = sp.GetRequiredService<InMemoryEventBus>();
+    var eventStore = sp.GetRequiredService<IIntegrationEventStore>();
+    var logger = sp.GetRequiredService<ILogger<StoringEventBus>>();
+    return new StoringEventBus(innerBus, eventStore, logger);
+});
 
 var app = builder.Build();
 

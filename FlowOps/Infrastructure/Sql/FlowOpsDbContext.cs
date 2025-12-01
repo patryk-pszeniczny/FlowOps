@@ -13,7 +13,7 @@ namespace FlowOps.Infrastructure.Sql
         }
 
         public DbSet<IdempotencyKeyEntity> IdempotencyKeys => Set<IdempotencyKeyEntity>();
-
+        public DbSet<IntegrationEventEntity> IntegrationEvents => Set<IntegrationEventEntity>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -29,6 +29,26 @@ namespace FlowOps.Infrastructure.Sql
                     .IsRequired();
 
                 entity.Property(e => e.SubscriptionId)
+                    .IsRequired();
+            });
+
+            modelBuilder.Entity<IntegrationEventEntity>(entity =>
+            {
+                entity.ToTable("IntegrationEvents");
+
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.TypeName)
+                    .HasMaxLength(256)
+                    .IsRequired();
+
+                entity.Property(e => e.OccurredAt)
+                    .IsRequired();
+
+                entity.Property(e => e.Version)
+                    .IsRequired();
+
+                entity.Property(e => e.PayLoadJson)
                     .IsRequired();
             });
         }
