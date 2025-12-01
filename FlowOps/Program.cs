@@ -46,7 +46,7 @@ builder.Services.AddHostedService<EventRecorderListener>();
 builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
 
 //Idempotency
-builder.Services.AddSingleton<IIdempotencyStore, EfCoreIdempotencyStore>();
+builder.Services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
 
 //Database
 builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
