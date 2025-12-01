@@ -6,24 +6,47 @@ namespace FlowOps.Infrastructure.Idempotency
     public sealed class EfCoreIdempotencyStore : IIdempotencyStore
     {
         private readonly FlowOpsDbContext _dbContext;
-        public EfCoreIdempotencyStore(FlowOpsDbContext dbContext)
+        private readonly ILogger<EfCoreIdempotencyStore> _logger;
+        public EfCoreIdempotencyStore(FlowOpsDbContext dbContext, ILogger<EfCoreIdempotencyStore> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
         public void Set(string key, Guid subscriptionId)
         {
-            var existing = _dbContext.IdempotencyKeys.Find(key);
-            if(existing is not null)
+            try
             {
-                return;
+                var existing = _dbContext.IdempotencyKeys.Find(key);
+                if (existing is not null)
+                {
+                    _logger.LogDebug(
+                        "Idempotency key '{Key}' already exists with SubscriptionId = {SubscriptionId}. No action taken.",
+                        key,
+                        existing.SubscriptionId);
+                    return;
+                }
+                var entity = new IdempotencyKeyEntity
+                {
+                    Key = key,
+                    SubscriptionId = subscriptionId
+                };
+                _dbContext.IdempotencyKeys.Add(entity);
+                _dbContext.SaveChanges();
+
+                _logger.LogInformation(
+                    "Stored idempotency key '{Key}' for SubscriptionId = {SubscriptionId}.",
+                    key,
+                    subscriptionId);
             }
-            var entity = new IdempotencyKeyEntity
+            catch (Exception ex)
             {
-                Key = key,
-                SubscriptionId = subscriptionId
-            };
-            _dbContext.IdempotencyKeys.Add(entity);
-            _dbContext.SaveChanges();
+                _logger.LogError(ex,
+                    "Error while storing idempotency key '{Key}' for SubscriptionId = {SubscriptionId}",
+                    key,
+                    subscriptionId);
+                throw;
+            }
+            
         }
 
         public bool TryGet(string key, out Guid subscriptionId)
