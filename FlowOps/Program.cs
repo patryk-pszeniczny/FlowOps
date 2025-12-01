@@ -14,6 +14,7 @@ using FlowOps.Services.Reporting;
 using FlowOps.Services.Reporting.Sql;
 using FlowOps.Services.Subscriptions.Sql;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,12 +46,24 @@ builder.Services.AddHostedService<EventRecorderListener>();
 builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
 
 //Idempotency
-builder.Services.AddSingleton<IIdempotencyStore, SqlIdempotencyStore>();
+builder.Services.AddSingleton<IIdempotencyStore, EfCoreIdempotencyStore>();
 
 //Database
 builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
 builder.Services.AddHostedService<SqlReportingProjector>();
 builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+//EF Core DbContext
+builder.Services.AddDbContext<FlowOpsDbContext>(options =>
+{
+    var connectionString =
+        builder.Configuration.GetConnectionString("ReportingDb")
+        ?? builder.Configuration["ConnectionStrings:ReportingDb"]
+        ?? builder.Configuration["ConnectionStrings__ReportingDb"]
+        ?? throw new InvalidOperationException(
+            "Missing connection string 'ReportingDb'. Set it via appsettings or env: ConnectionStrings__ReportingDb.");
+    options.UseSqlServer(connectionString);
+});
+
 
 //DataBase - Health Check
 builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
