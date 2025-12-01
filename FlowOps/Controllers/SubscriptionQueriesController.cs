@@ -82,7 +82,7 @@ namespace FlowOps.Controllers
             var item = await queries.GetSubscriptionByIdAsync(subscriptionId, ct);
             if (item is null)
             {
-               throw new KeyNotFoundException($"Subscription {subscriptionId} not found in SQL.");
+                throw new KeyNotFoundException($"Subscription {subscriptionId} not found in SQL.");
             }
             return Ok(item);
         }
@@ -97,27 +97,29 @@ namespace FlowOps.Controllers
             [FromServices] ISqlReportingQueries queries = null!,
             CancellationToken ct = default)
         {
-            if(page <= 0)
+            if (page <= 0)
             {
                 return BadRequest("Page number must be greater than 0.");
             }
-            if(pageSize <= 0 || pageSize > 200)
+            if (pageSize <= 0 || pageSize > 200)
             {
                 return BadRequest("Page size must be between 1 and 200.");
             }
-            if (!string.IsNullOrWhiteSpace(orderBy)){
+            if (!string.IsNullOrWhiteSpace(orderBy))
+            {
                 var order = orderBy.Trim();
-                if(order is not ("ActivatedAt" or "Status"))
+                if (order is not ("ActivatedAt" or "Status"))
                 {
                     return BadRequest("Invalid orderBy value. Allowed values are: ActivatedAt, Status.");
                 }
                 orderBy = order;
             }
-            if (!string.IsNullOrWhiteSpace(orderDirection)){
+            if (!string.IsNullOrWhiteSpace(orderDirection))
+            {
                 var direction = orderDirection.Trim().ToUpperInvariant();
-                if(direction is not ("asc" or "desc"))
+                if (direction is not ("ASC" or "DESC"))
                 {
-                    return BadRequest("Invalid orderDirection value. Allowed values are: asc, desc.");
+                    return BadRequest("Invalid orderDirection value. Allowed values are: ASC, DESC.");
                 }
                 orderDirection = direction;
             }
@@ -139,6 +141,16 @@ namespace FlowOps.Controllers
                 status,
                 ct);
             return Ok(pagedResult);
+        }
+
+        [HttpGet("sql/by-customer/{customerId:guid}/status-summary")]
+        public async Task<ActionResult<SubscriptionStatusSummaryResponse>> GetStatusSummarySql(
+            Guid customerId,
+            [FromServices] ISqlReportingQueries queries,
+            CancellationToken ct)
+        {
+            var summary = await queries.GetStatusSummaryAsync(customerId, ct);
+            return Ok(summary);
         }
     }
 }

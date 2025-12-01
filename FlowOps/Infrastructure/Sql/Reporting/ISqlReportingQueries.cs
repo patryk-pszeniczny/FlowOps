@@ -17,5 +17,8 @@ namespace FlowOps.Infrastructure.Sql.Reporting
             string? orderDirection = null,
             string? status = null,
             CancellationToken ct = default);
+        Task<SubscriptionStatusSummaryResponse> GetStatusSummaryAsync(
+            Guid customerId,
+            CancellationToken ct = default);
     }
 }

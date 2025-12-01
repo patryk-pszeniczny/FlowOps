@@ -238,7 +238,7 @@ namespace FlowOps.Infrastructure.Sql.Reporting
                         WHERE
                             CustomerId = @cid AND (@st IS NULL or Status = @st)
                         ORDER BY
-                            @order @direction, SubscriptionId ASC
+                            {orderColumn} {orderDir}, SubscriptionId ASC
                         OFFSET @skip ROWS FETCH NEXT @take ROWS ONLY;";
                     command.Parameters.Add(
                         new SqlParameter("@cid", SqlDbType.UniqueIdentifier)
@@ -259,16 +259,6 @@ namespace FlowOps.Infrastructure.Sql.Reporting
                         new SqlParameter("@take", SqlDbType.Int)
                         {
                             Value = pageSize
-                        });
-                    command.Parameters.Add(
-                        new SqlParameter("@order", SqlDbType.NVarChar, 32)
-                        {
-                            Value = orderColumn
-                        });
-                    command.Parameters.Add(
-                        new SqlParameter("@direction", SqlDbType.NVarChar, 4)
-                        {
-                            Value = orderDir
                         });
                     await using var reader = await command.ExecuteReaderAsync(ct);
                     while(await reader.ReadAsync(ct))
@@ -295,6 +285,50 @@ namespace FlowOps.Infrastructure.Sql.Reporting
                 PageSize: pageSize,
                 TotalCount: totalCount,
                 TotalPages: totalPages
+            );
+        }
+        public async Task<SubscriptionStatusSummaryResponse> GetStatusSummaryAsync(
+            Guid customerId,
+            CancellationToken ct = default)
+        {
+            int active = 0, suspended = 0, cancelled = 0;
+
+            await using var connection = await _connectionFactory.CreateOpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandType = CommandType.Text;
+            command.CommandText = @"
+                SELECT 
+                    Status, COUNT(*) AS Count
+                FROM 
+                    dbo.Subscriptions
+                WHERE 
+                    CustomerId = @cid
+                GROUP BY 
+                    Status;";
+            command.Parameters.Add(
+                new SqlParameter("@cid", SqlDbType.UniqueIdentifier)
+                {
+                    Value = customerId
+                });
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var status = reader.GetString(0);
+                var count = reader.GetInt32(1);
+                switch (status)
+                {
+                    case "Active":    active    = count; break;
+                    case "Suspended": suspended = count; break;
+                    case "Cancelled": cancelled = count; break;
+                }
+            }
+            var total = active + suspended + cancelled;
+            return new SubscriptionStatusSummaryResponse(
+                CustomerId: customerId,
+                Active: active,
+                Suspended: suspended,
+                Cancelled: cancelled,
+                Total: total
             );
         }
     }

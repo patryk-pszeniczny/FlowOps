@@ -49,7 +49,7 @@ public class BillingHandler : IBillingHandler
 
         var issued = new InvoiceIssuedEvent
         {
-            InoiceId = Guid.NewGuid(),
+            InvoiceId = Guid.NewGuid(),
             CustomerId = ev.CustomerId,
             SubscriptionId = ev.SubscriptionId,
             PlanCode = ev.PlanCode,
