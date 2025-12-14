@@ -11,3 +11,8 @@
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__ReportingDb: "${REPORTINGDB}"
+      RabbitMQ__HostName: "${RabbitMQ__HostName}"
+      RabbitMQ__Port: "${RabbitMQ__Port}"
+      RabbitMQ__UserName: "${RabbitMQ__UserName}"
+      RabbitMQ__Password: "${RabbitMQ__Password}"
+      RabbitMQ__VirtualHost: "${RabbitMQ__VirtualHost}"

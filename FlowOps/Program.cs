@@ -3,6 +3,7 @@ using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
+using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Sql;
 using FlowOps.Infrastructure.Sql.Reporting;
 using FlowOps.Middleware;
@@ -22,7 +23,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
-//builder.Services.AddSingleton<IEventBus, InMemoryEventBus>();
+
 builder.Services.AddSingleton<IReportingStore, InMemoryReportingStore>();
 
 //billing
@@ -72,11 +73,11 @@ builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStor
 builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
 
 //Event Bus with Event Store decorator
-builder.Services.AddSingleton<InMemoryEventBus>();
+builder.Services.AddSingleton<RabbitMqEventBus>();
 
 builder.Services.AddSingleton<IEventBus>(sp =>
 {
-    var innerBus = sp.GetRequiredService<InMemoryEventBus>();
+    var innerBus = sp.GetRequiredService<RabbitMqEventBus>();
     var eventStore = sp.GetRequiredService<IIntegrationEventStore>();
     var logger = sp.GetRequiredService<ILogger<StoringEventBus>>();
     return new StoringEventBus(innerBus, eventStore, logger);
