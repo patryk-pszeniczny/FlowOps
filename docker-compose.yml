@@ -31,6 +31,30 @@ services:
 
       ConnectionStrings__ReportingDb: "${REPORTINGDB}"
 
+      ASPNETCORE_URLS: "http://127.0.0.1:0"
+      ASPNETCORE_HTTP_PORTS: ""
+      ASPNETCORE_HTTPS_PORTS: ""
+
+      RabbitMQ__HostName: "${RabbitMQ__HostName}"
+      RabbitMQ__Port: "${RabbitMQ__Port}"
+      RabbitMQ__UserName: "${RabbitMQ__UserName}"
+      RabbitMQ__Password: "${RabbitMQ__Password}"
+      RabbitMQ__VirtualHost: "${RabbitMQ__VirtualHost}"
+
+  reporting:
+     image: "flowops:dev"
+     container_name: flowops-reporting
+     environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+
+      FLOWOPS_ROLE: "reporting"
+
+      ConnectionStrings__ReportingDb: "${REPORTINGDB}"
+
+      ASPNETCORE_URLS: "http://127.0.0.1:0"
+      ASPNETCORE_HTTP_PORTS: ""
+      ASPNETCORE_HTTPS_PORTS: ""
+
       RabbitMQ__HostName: "${RabbitMQ__HostName}"
       RabbitMQ__Port: "${RabbitMQ__Port}"
       RabbitMQ__UserName: "${RabbitMQ__UserName}"

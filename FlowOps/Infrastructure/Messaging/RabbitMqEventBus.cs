@@ -37,8 +37,7 @@ namespace FlowOps.Infrastructure.Messaging
             var virtualHost = configuration["RabbitMQ:VirtualHost"] ?? "/";
 
             var port = string.IsNullOrWhiteSpace(portString)
-                ? 5672
-                : int.Parse(portString);
+                ? 5672 : int.Parse(portString);
 
             _factory = new ConnectionFactory
             {
@@ -47,8 +46,17 @@ namespace FlowOps.Infrastructure.Messaging
                 UserName = userName,
                 Password = password,
                 VirtualHost = virtualHost,
+
                 AutomaticRecoveryEnabled = true,
+
+                ConsumerDispatchConcurrency = 1,
+
+                ContinuationTimeout = TimeSpan.FromSeconds(30),
+                HandshakeContinuationTimeout = TimeSpan.FromSeconds(30),
+
+                RequestedConnectionTimeout = TimeSpan.FromSeconds(15),
             };
+
 
             _serializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         }
