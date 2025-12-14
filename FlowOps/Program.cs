@@ -1,4 +1,4 @@
-using System.Text.Json;
+using FlowOps.Application.Customer;
 using FlowOps.Application.Subscriptions;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Subscriptions;
@@ -11,10 +11,12 @@ using FlowOps.Middleware;
 using FlowOps.Pricing;
 using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
+using FlowOps.Services.Reporting.Customer;
 using FlowOps.Services.Reporting.Sql;
 using FlowOps.Services.Subscriptions.Sql;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +70,7 @@ if (isReporting)
     builder.Services.AddHostedService<EventRecorderListener>();
 
     builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+    builder.Services.AddHostedService<CustomerDirectoryProjector>();
 }
 
 if (isApi)
@@ -81,6 +84,8 @@ if (isApi)
 
     builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
     builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+
+    builder.Services.AddScoped<CustomerCommandService>();
 
 
 }

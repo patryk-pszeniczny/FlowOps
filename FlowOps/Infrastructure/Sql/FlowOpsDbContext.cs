@@ -1,7 +1,8 @@
 ﻿
 
-using FlowOps.Infrastructure.Customers;
+using FlowOps.Infrastructure.Customer;
 using FlowOps.Infrastructure.Idempotency;
+using FlowOps.Infrastructure.Sql.Reporting.Customer;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlowOps.Infrastructure.Sql
@@ -15,8 +16,8 @@ namespace FlowOps.Infrastructure.Sql
 
         public DbSet<IdempotencyKeyEntity> IdempotencyKeys => Set<IdempotencyKeyEntity>();
         public DbSet<IntegrationEventEntity> IntegrationEvents => Set<IntegrationEventEntity>();
-
         public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
+        public DbSet<CustomerDirectoryEntry> CustomerDirectoryEntries => Set<CustomerDirectoryEntry>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -71,6 +72,20 @@ namespace FlowOps.Infrastructure.Sql
                 entity.Property(e => e.Email)
                     .HasMaxLength(256);
 
+                entity.Property(e => e.CreatedAt)
+                    .IsRequired();
+            });
+            modelBuilder.Entity<CustomerDirectoryEntry>(entity =>
+            {
+                entity.ToTable("CustomerDirectory");
+                entity.HasKey(e => e.CustomerId);
+                entity.Property(e => e.Name)
+                    .HasMaxLength(200)
+                    .IsRequired();
+                entity.Property(e => e.TaxId)
+                    .HasMaxLength(32);
+                entity.Property(e => e.Email)
+                    .HasMaxLength(256);
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
             });
