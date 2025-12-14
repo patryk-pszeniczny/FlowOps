@@ -1,4 +1,5 @@
-﻿services:
+﻿
+services:
   flowops:
     build:
       context: .
@@ -10,7 +11,26 @@
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ASPNETCORE_URLS: "http://+:8080"
+
+      FLOWOPS_ROLE: "api"
+
       ConnectionStrings__ReportingDb: "${REPORTINGDB}"
+
+      RabbitMQ__HostName: "${RabbitMQ__HostName}"
+      RabbitMQ__Port: "${RabbitMQ__Port}"
+      RabbitMQ__UserName: "${RabbitMQ__UserName}"
+      RabbitMQ__Password: "${RabbitMQ__Password}"
+      RabbitMQ__VirtualHost: "${RabbitMQ__VirtualHost}"
+  billing:
+     image: "flowops:dev"
+     container_name: flowops-billing
+     environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+
+      FLOWOPS_ROLE: "billing"
+
+      ConnectionStrings__ReportingDb: "${REPORTINGDB}"
+
       RabbitMQ__HostName: "${RabbitMQ__HostName}"
       RabbitMQ__Port: "${RabbitMQ__Port}"
       RabbitMQ__UserName: "${RabbitMQ__UserName}"

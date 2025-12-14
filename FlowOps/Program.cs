@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FlowOps.Application.Subscriptions;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Subscriptions;
@@ -16,42 +17,15 @@ using FlowOps.Services.Reporting.Sql;
 using FlowOps.Services.Subscriptions.Sql;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddHealthChecks();
-builder.Services.AddOpenApi();
+var role = (builder.Configuration["FLOWOPS_ROLE"] ?? "api").Trim().ToLowerInvariant();
+var isBilling = role == "billing";
+var isApi = !isBilling;
 
-builder.Services.AddSingleton<IReportingStore, InMemoryReportingStore>();
+builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
 
-//billing
-builder.Services.AddScoped<IBillingHandler, BillingHandler>();
-builder.Services.AddHostedService<BillingListener>();
-
-//Reporting
-builder.Services.AddScoped<IReportingHandler, ReportingHandler>();
-builder.Services.AddHostedService<ReportingListener>();
-
-//Subscriptions
-builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
-builder.Services.AddScoped<SubscriptionCommandService>();
-builder.Services.AddHostedService<SqlSubscriptionsProjector>();
-
-//Replay
-builder.Services.AddSingleton<EventRecorder>();
-builder.Services.AddHostedService<EventRecorderListener>();
-
-//Pricing
-builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
-
-//Database
-builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
-builder.Services.AddHostedService<SqlReportingProjector>();
-builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
-
-//EF Core DbContext
 builder.Services.AddDbContext<FlowOpsDbContext>(options =>
 {
     var connectionString =
@@ -60,21 +34,15 @@ builder.Services.AddDbContext<FlowOpsDbContext>(options =>
         ?? builder.Configuration["ConnectionStrings__ReportingDb"]
         ?? throw new InvalidOperationException(
             "Missing connection string 'ReportingDb'. Set it via appsettings or env: ConnectionStrings__ReportingDb.");
+
     options.UseSqlServer(connectionString);
 });
 
-//Idempotency
 builder.Services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
 
-//Event Store (SQL, EF Core)
 builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStore>();
 
-//DataBase - Health Check
-builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
-
-//Event Bus with Event Store decorator
 builder.Services.AddSingleton<RabbitMqEventBus>();
-
 builder.Services.AddSingleton<IEventBus>(sp =>
 {
     var innerBus = sp.GetRequiredService<RabbitMqEventBus>();
@@ -83,20 +51,50 @@ builder.Services.AddSingleton<IEventBus>(sp =>
     return new StoringEventBus(innerBus, eventStore, logger);
 });
 
+builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
+
+//BILLING ROLE
+if (isBilling)
+{
+    builder.Services.AddScoped<IBillingHandler, BillingHandler>();
+    builder.Services.AddHostedService<BillingListener>();
+
+}
+else
+{
+    builder.Services.AddControllers();
+    builder.Services.AddOpenApi();
+
+    builder.Services.AddSingleton<IReportingStore, InMemoryReportingStore>();
+    builder.Services.AddScoped<IReportingHandler, ReportingHandler>();
+    builder.Services.AddHostedService<ReportingListener>();
+
+    builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
+    builder.Services.AddScoped<SubscriptionCommandService>();
+    builder.Services.AddHostedService<SqlSubscriptionsProjector>();
+
+    builder.Services.AddSingleton<EventRecorder>();
+    builder.Services.AddHostedService<EventRecorderListener>();
+
+    builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
+    builder.Services.AddHostedService<SqlReportingProjector>();
+    builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+
+}
+
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.Logger.LogInformation("FLOWOPS_ROLE={Role}", role);
+
+app.UseMiddleware<ProblemDetailsMiddleware>();
 
 if (!string.IsNullOrWhiteSpace(builder.Configuration["ASPNETCORE_HTTPS_PORTS"]))
 {
     app.UseHttpsRedirection();
 }
+
 app.UseAuthorization();
-app.UseMiddleware<ProblemDetailsMiddleware>();
-app.MapControllers();
+
 app.MapHealthChecks("/healthz");
 app.MapHealthChecks("/healthz/details", new HealthCheckOptions
 {
@@ -116,9 +114,20 @@ app.MapHealthChecks("/healthz/details", new HealthCheckOptions
                 exception = e.Value.Exception?.Message
             })
         };
+
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
         await context.Response.WriteAsync(json);
     }
 });
+
+if (isApi)
+{
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+    }
+
+    app.MapControllers();
+}
 
 app.Run();
