@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
@@ -19,6 +20,9 @@ namespace FlowOps.Infrastructure.Messaging
 
         private IConnection? _connection;
         private IChannel? _channel;
+
+        private readonly SemaphoreSlim _connectLock = new(1, 1);
+        private readonly ConcurrentDictionary<string, byte> _subscriptions = new();
 
         public RabbitMqEventBus(
             IConfiguration configuration,
@@ -55,33 +59,44 @@ namespace FlowOps.Infrastructure.Messaging
             {
                 return;
             }
+            await _connectLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (_connection is { IsOpen: true } && _channel is { IsOpen: true })
+                {
+                    return;
+                }
+                _logger.LogInformation(
+                    "RabbitMQ: connecting to {Host}:{Port}...",
+                    _factory.HostName,
+                    _factory.Port);
 
-            _logger.LogInformation(
-                "RabbitMQ: connecting to {Host}:{Port}...",
-                _factory.HostName,
-                _factory.Port);
+                _connection = await _factory
+                    .CreateConnectionAsync(cancellationToken)
+                    .ConfigureAwait(false);
 
-            _connection = await _factory
-                .CreateConnectionAsync(cancellationToken)
-                .ConfigureAwait(false);
+                _channel = await _connection
+                    .CreateChannelAsync(options: null, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
 
-            _channel = await _connection
-                .CreateChannelAsync(options: null, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                await _channel.ExchangeDeclareAsync(
+                    exchange: ExchangeName,
+                    type: "topic",
+                    durable: true,
+                    autoDelete: false,
+                    arguments: null,
+                    passive: false,
+                    noWait: false,
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            await _channel.ExchangeDeclareAsync(
-                exchange: ExchangeName,
-                type: "topic",
-                durable: true,
-                autoDelete: false,
-                arguments: null,
-                passive: false,
-                noWait: false,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "RabbitMQ: connected and using exchange '{Exchange}'.",
-                ExchangeName);
+                _logger.LogInformation(
+                    "RabbitMQ: connected and using exchange '{Exchange}'.",
+                    ExchangeName);
+            }
+            finally
+            {
+                _connectLock.Release();
+            }
         }
 
         public async Task PublishAsync<T>(T @event) where T : IntegrationEvent
@@ -94,12 +109,12 @@ namespace FlowOps.Infrastructure.Messaging
             var eventType = @event.GetType();
             var routingKey = eventType.FullName ?? eventType.Name;
 
-            var body = JsonSerializer.SerializeToUtf8Bytes(@event, _serializerOptions);
+            var body = JsonSerializer.SerializeToUtf8Bytes(@event, eventType, _serializerOptions);
 
             var props = new BasicProperties
             {
                 ContentType = "application/json",
-                Type = routingKey
+                Type = eventType.AssemblyQualifiedName,
             };
 
             _logger.LogInformation(
@@ -124,7 +139,19 @@ namespace FlowOps.Infrastructure.Messaging
 
             var eventType = typeof(T);
             var routingKey = eventType.FullName ?? eventType.Name;
-            var queueName = $"flowops.{eventType.Name}".ToLowerInvariant();
+
+            var subscriberName = handler.Target?.GetType().Name ?? "anonymous";
+            var queueName = $"flowops.{subscriberName}.{eventType.Name}".ToLowerInvariant();
+
+            var subscriptionKey = $"{queueName}|{routingKey}";
+            if(!_subscriptions.TryAdd(subscriptionKey, 0))
+            {
+                _logger.LogInformation(
+                      "RabbitMQ: already subscribed. queue='{Queue}', rk='{RoutingKey}'.",
+                      queueName,
+                      routingKey);
+                return;
+            }
 
             _ = Task.Run(async () =>
             {
@@ -190,10 +217,12 @@ namespace FlowOps.Infrastructure.Messaging
                         cancellationToken: ct).ConfigureAwait(false);
 
                     _logger.LogInformation(
-                        "RabbitMQ: subscribed to {EventType} on queue '{Queue}', rk='{RoutingKey}'.",
+                        "RabbitMQ: subscribed. subscriber='{Subscriber}', event='{Event}', queue='{Queue}', rk='{RoutingKey}'.",
+                        subscriberName,
                         eventType.Name,
                         queueName,
                         routingKey);
+
                 }
                 catch (Exception ex)
                 {
@@ -211,37 +240,24 @@ namespace FlowOps.Infrastructure.Messaging
             {
                 try
                 {
-                    await _channel.CloseAsync(
-                        replyCode: 200,
-                        replyText: "Disposing",
-                        abort: false,
-                        cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                    await _channel.CloseAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "RabbitMQ: error while closing channel.");
                 }
-
-                await _channel.DisposeAsync().ConfigureAwait(false);
             }
 
             if (_connection is not null)
             {
                 try
                 {
-                    await _connection.CloseAsync(
-                        reasonCode: 200,
-                        reasonText: "Disposing",
-                        timeout: TimeSpan.FromSeconds(5),
-                        abort: false,
-                        cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                    await _connection.CloseAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "RabbitMQ: error while closing connection.");
                 }
-
-                await _connection.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

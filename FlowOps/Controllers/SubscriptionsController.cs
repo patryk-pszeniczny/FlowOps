@@ -16,15 +16,24 @@ namespace FlowOps.Controllers
     {
         private readonly SubscriptionCommandService _service;
         private readonly IIdempotencyStore _idempotency;
-        public SubscriptionsController(SubscriptionCommandService service, IIdempotencyStore idempotency)
+        private readonly ILogger<SubscriptionsController> _logger;
+        public SubscriptionsController(SubscriptionCommandService service, IIdempotencyStore idempotency, ILogger<SubscriptionsController> logger)
         {
             _service = service;
             _idempotency = idempotency;
+            _logger = logger;
         }
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSubscriptionRequest request)
         {
             var idempotencyKey = Request.Headers.TryGetValue("Idempotency-Key", out var vals) ? vals.ToString() : null;
+
+
+            _logger.LogInformation(
+                "CreateSubscription: customerId={CustomerId}, planCode={PlanCode}, idem={Idem}",
+                request.CustomerId,
+                request.PlanCode,
+                idempotencyKey);
 
             if (!string.IsNullOrWhiteSpace(idempotencyKey) && _idempotency.TryGet(idempotencyKey, out var existringId))
             {
