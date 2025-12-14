@@ -1,7 +1,5 @@
 ﻿using FlowOps.Contracts.Response;
 using FlowOps.Infrastructure.Sql.Reporting;
-using FlowOps.Reports.Models;
-using FlowOps.Reports.Stores;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FlowOps.Controllers
@@ -10,48 +8,35 @@ namespace FlowOps.Controllers
     [Route("api/reports")]
     public class ReportsController : ControllerBase
     {
-        private readonly IReportingStore _store;
-        public ReportsController(IReportingStore store)
+        private readonly ISqlReportingQueries _queries;
+        private readonly ILogger<ReportsController> _logger;
+
+        public ReportsController(ISqlReportingQueries queries, ILogger<ReportsController> logger)
         {
-            _store = store;
+            _queries = queries;
+            _logger = logger;
         }
-        // path postman : GET http://localhost:32768/api/reports/customers/{customerId}
+
         [HttpGet("customers/{customerId:guid}")]
-        public ActionResult<CustomerReport> Get(Guid customerId){
-            if (_store.TryGet(customerId, out var report) && report is not null)
-            {
-                return Ok(report);
-            }
-            return NotFound();
-        }
-        [HttpGet("customers/{customerId:guid}/active-subscriptions")]
-        public IActionResult GetActiveSubscriptionIds(Guid customerId)
+        public async Task<ActionResult<CustomerReportSqlResponse>> GetCustomerReport(Guid customerId, CancellationToken ct)
         {
-            var report = _store.GetOrAdd(customerId);
-            var ids = report.ActiveSubscriptionIds.OrderBy(id => id).ToArray();
-            return Ok(ids);
-        }
-        [HttpGet("sql/customers/{customerId:guid}")]
-        public async Task<ActionResult<CustomerReportSqlResponse>> GetCustomerReportSql(
-            Guid customerId,
-            [FromServices] ISqlReportingQueries queries,
-            CancellationToken ct)
-        {
-            var result = await queries.GetCustomerReportAsync(customerId, ct);
-            if(result is null)
+            var result = await _queries.GetCustomerReportAsync(customerId, ct);
+
+            if (result is null)
             {
-                throw new KeyNotFoundException($"Customer {customerId} not found in SQL report.");
+                _logger.LogInformation("Customer report not found in SQL. CustomerId={CustomerId}", customerId);
+                return NotFound(new { message = "Customer report not found", customerId });
             }
+
             return Ok(result);
         }
-        [HttpGet("sql/customers/{customerId:guid}/active-subscriptions")]
-        public async Task<ActionResult<IEnumerable<Guid>>> GetActiveSubscriptionIdsSql(
-            Guid customerId,
-            [FromServices] ISqlReportingQueries queries,
-            CancellationToken ct)
+
+        [HttpGet("customers/{customerId:guid}/active-subscriptions")]
+        public async Task<ActionResult<IEnumerable<Guid>>> GetActiveSubscriptionIds(Guid customerId, CancellationToken ct)
         {
-            var ids = await queries.GetActiveSubscriptionIdsAsync(customerId, ct);
-            return Ok(ids);
+            var ids = await _queries.GetActiveSubscriptionIdsAsync(customerId, ct);
+            var ordered = ids.OrderBy(x => x).ToArray();
+            return Ok(ordered);
         }
     }
 }

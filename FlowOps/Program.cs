@@ -79,6 +79,10 @@ if (isApi)
     builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
     builder.Services.AddScoped<SubscriptionCommandService>();
 
+    builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
+    builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+
+
 }
 
 var app = builder.Build();
