@@ -7,6 +7,7 @@ using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Sql;
 using FlowOps.Infrastructure.Sql.Reporting;
+using FlowOps.Infrastructure.Sql.Reporting.Customer;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
 using FlowOps.Services.Billing;
@@ -71,6 +72,10 @@ if (isReporting)
 
     builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
     builder.Services.AddHostedService<CustomerDirectoryProjector>();
+
+    builder.Services.AddScoped<FlowOps.Infrastructure.Sql.Reporting.Customer.CustomerDirectoryQueries>();
+
+
 }
 
 if (isApi)

@@ -1,22 +1,21 @@
 ﻿using FlowOps.Application.Customer;
 using FlowOps.Contracts.Request.Customers;
-using FlowOps.Infrastructure.Customer;
 using FlowOps.Infrastructure.Sql;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlowOps.Controllers
+namespace FlowOps.Controllers.Customer
 {
     [ApiController]
-    [Route("api/customers")]
-    public sealed class CustomersController : ControllerBase
+    [Route("api/customer")]
+    public sealed class CustomerController : ControllerBase
     {
         private readonly FlowOpsDbContext _database;
         private readonly CustomerCommandService _command;
-        private readonly ILogger<CustomersController> _logger;
-        public CustomersController(FlowOpsDbContext database, 
+        private readonly ILogger<CustomerController> _logger;
+        public CustomerController(FlowOpsDbContext database, 
             CustomerCommandService command,
-            ILogger<CustomersController> logger)
+            ILogger<CustomerController> logger)
         {
             _database = database;
             _command = command;

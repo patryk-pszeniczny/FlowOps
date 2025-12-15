@@ -83,6 +83,9 @@ namespace FlowOps.Application.Customer
                 Email = entity.Email,
                 CreatedAt = entity.CreatedAt
             };
+
+            await _eventsBus.PublishAsync(@event);
+
             _logger.LogInformation(
                 "Created customer CustomerId={CustomerId}, Name={Name} and published CustomerCreatedEvent (EventId={EventId}).",
                 entity.CustomerId,
