@@ -1,13 +1,14 @@
 using FlowOps.Application.Customer;
 using FlowOps.Application.Subscriptions;
+using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Subscriptions;
+using FlowOps.Events;
 using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Sql;
 using FlowOps.Infrastructure.Sql.Reporting;
-using FlowOps.Infrastructure.Sql.Reporting.Customer;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
 using FlowOps.Services.Billing;
@@ -25,6 +26,7 @@ var role = (builder.Configuration["FLOWOPS_ROLE"] ?? "api").Trim().ToLowerInvari
 var isBilling = role == "billing";
 var isReporting = role == "reporting";
 var isApi = !isBilling && !isReporting;
+var exposesHttpApi = isApi || isReporting;
 
 builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
 
@@ -55,6 +57,11 @@ builder.Services.AddSingleton<IEventBus>(sp =>
     return new StoringEventBus(innerBus, eventStore, logger);
 });
 
+if (exposesHttpApi)
+{
+    builder.Services.AddControllers();
+}
+
 if (isBilling)
 {
     builder.Services.AddScoped<IBillingHandler, BillingHandler>();
@@ -71,16 +78,14 @@ if (isReporting)
     builder.Services.AddHostedService<EventRecorderListener>();
 
     builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
-    builder.Services.AddHostedService<CustomerDirectoryProjector>();
+    builder.Services.AddHostedService<CustomerDirectoryListener>();
 
-    builder.Services.AddScoped<FlowOps.Infrastructure.Sql.Reporting.Customer.CustomerDirectoryQueries>();
-
-
+    builder.Services.AddScoped<CustomerDirectoryQueries>();
+    builder.Services.AddScoped<IIntegrationEventHandler<CustomerCreatedEvent>, CustomerCreatedEventHandler>();
 }
 
 if (isApi)
 {
-    builder.Services.AddControllers();
     builder.Services.AddOpenApi();
     builder.Services.AddAuthorization();
 
@@ -91,12 +96,18 @@ if (isApi)
     builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
 
     builder.Services.AddScoped<CustomerCommandService>();
-
-
 }
 
 var app = builder.Build();
+
 app.Logger.LogInformation("FLOWOPS_ROLE={Role}", role);
+
+if (isReporting)
+{
+    using var scope = app.Services.CreateScope();
+    var ok = scope.ServiceProvider.GetService<CustomerDirectoryQueries>() is not null;
+    app.Logger.LogInformation("DI check: CustomerDirectoryQueries registered = {Ok}", ok);
+}
 
 app.UseMiddleware<ProblemDetailsMiddleware>();
 
@@ -113,9 +124,14 @@ if (isApi)
     {
         app.MapOpenApi();
     }
+}
 
+if (exposesHttpApi)
+{
     app.MapControllers();
 }
+
+app.MapGet("/whoami", () => Results.Ok(new { role }));
 
 app.MapHealthChecks("/healthz");
 app.MapHealthChecks("/healthz/details", new HealthCheckOptions

@@ -1,6 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using FlowOps.Infrastructure.Sql.Reporting.Customer;
+using Microsoft.EntityFrameworkCore;
 
-namespace FlowOps.Infrastructure.Sql.Reporting.Customer
+namespace FlowOps.Infrastructure.Sql.Reporting
 {
     public sealed class CustomerDirectoryQueries
     {
@@ -23,13 +24,13 @@ namespace FlowOps.Infrastructure.Sql.Reporting.Customer
         public async Task<IReadOnlyList<CustomerDirectoryEntry>> SearchAsync(string? q, int take, CancellationToken ct)
         {
             if (take <= 0) take = 20;
-            if(take > 100) take = 100;
+            if (take > 100) take = 100;
 
             var query = _database.Set<CustomerDirectoryEntry>().AsNoTracking();
 
             q = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
-            
-            if(q is not null)
+
+            if (q is not null)
             {
                 query = query.Where(c =>
                     c.Name.Contains(q) ||

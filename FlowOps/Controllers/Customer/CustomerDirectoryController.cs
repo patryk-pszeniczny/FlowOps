@@ -1,4 +1,5 @@
-﻿using FlowOps.Infrastructure.Sql.Reporting.Customer;
+﻿
+using FlowOps.Infrastructure.Sql.Reporting;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FlowOps.Controllers.Customer
