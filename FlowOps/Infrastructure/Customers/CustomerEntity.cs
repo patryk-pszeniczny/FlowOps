@@ -1,4 +1,4 @@
-﻿namespace FlowOps.Infrastructure.Customer
+﻿namespace FlowOps.Infrastructure.Customers
 {
     public sealed class CustomerEntity
     {

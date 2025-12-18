@@ -1,16 +1,26 @@
-using FlowOps.Application.Customer;
-using FlowOps.Application.Subscriptions;
+using FlowOps.Application.Common;
+using FlowOps.Application.Customers.Commands;
+using FlowOps.Application.Customers.Queries;
+using FlowOps.Application.Reporting;
+using FlowOps.Application.Subscriptions.Commands;
+using FlowOps.Application.Subscriptions.Queries;
 using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
+using FlowOps.Domain.Customers;
+using FlowOps.Domain.Plans;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Events;
+using FlowOps.Infrastructure.Common;
+using FlowOps.Infrastructure.Customers;
 using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Sql;
 using FlowOps.Infrastructure.Sql.Reporting;
+using FlowOps.Infrastructure.Subscriptions;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
+using FlowOps.Reports.Stores;
 using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
 using FlowOps.Services.Reporting.Customer;
@@ -46,7 +56,10 @@ builder.Services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
 
 builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStore>();
 
+builder.Services.AddSingleton<ITimeProvider, SystemTimeProvider>();
+
 builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
+builder.Services.AddSingleton<IReportingStore, InMemoryReportingStore>();
 
 builder.Services.AddSingleton<RabbitMqEventBus>();
 builder.Services.AddSingleton<IEventBus>(sp =>
@@ -72,7 +85,7 @@ if (isReporting)
 {
     builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
 
-    builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+    builder.Services.AddSingleton<IReportingQueries, SqlReportingQueries>();
     builder.Services.AddScoped<CustomerDirectoryQueries>();
 
     builder.Services.AddScoped<IIntegrationEventHandler<CustomerCreatedEvent>, CustomerCreatedEventHandler>();
@@ -92,12 +105,20 @@ if (isApi)
     builder.Services.AddAuthorization();
 
     builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
-    builder.Services.AddScoped<SubscriptionCommandService>();
+
+    builder.Services.AddScoped<CreateSubscriptionCommandHandler>();
+    builder.Services.AddScoped<CancelSubscriptionCommandHandler>();
+    builder.Services.AddScoped<SuspendSubscriptionCommandHandler>();
+    builder.Services.AddScoped<ResumeSubscriptionCommandHandler>();
+    builder.Services.AddScoped<SubscriptionQueries>();
+
+    builder.Services.AddScoped<ICustomerRepository, EfCustomerRepository>();
+    builder.Services.AddScoped<CreateCustomerCommandHandler>();
+    builder.Services.AddScoped<CustomerQueries>();
 
     builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
-    builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+    builder.Services.AddSingleton<IReportingQueries, SqlReportingQueries>();
 
-    builder.Services.AddScoped<CustomerCommandService>();
 }
 
 var app = builder.Build();

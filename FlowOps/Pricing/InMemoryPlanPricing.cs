@@ -1,4 +1,6 @@
-﻿namespace FlowOps.Pricing
+﻿using FlowOps.Domain.Plans;
+
+namespace FlowOps.Pricing
 {
     public sealed class InMemoryPlanPricing : IPlanPricing
     {

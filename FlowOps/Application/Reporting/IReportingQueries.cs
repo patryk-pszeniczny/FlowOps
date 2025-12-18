@@ -1,9 +1,9 @@
 ﻿using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
 
-namespace FlowOps.Infrastructure.Sql.Reporting
+namespace FlowOps.Application.Reporting
 {
-    public interface ISqlReportingQueries
+    public interface IReportingQueries
     {
         Task<CustomerReportSqlResponse?> GetCustomerReportAsync(Guid customerId, CancellationToken ct = default);
         Task<IReadOnlyList<Guid>> GetActiveSubscriptionIdsAsync(Guid customerId, CancellationToken ct = default);

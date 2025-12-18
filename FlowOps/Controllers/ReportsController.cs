@@ -1,5 +1,5 @@
-﻿using FlowOps.Contracts.Response;
-using FlowOps.Infrastructure.Sql.Reporting;
+﻿using FlowOps.Application.Reporting;
+using FlowOps.Contracts.Response;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FlowOps.Controllers
@@ -8,10 +8,10 @@ namespace FlowOps.Controllers
     [Route("api/reports")]
     public class ReportsController : ControllerBase
     {
-        private readonly ISqlReportingQueries _queries;
+        private readonly IReportingQueries _queries;
         private readonly ILogger<ReportsController> _logger;
 
-        public ReportsController(ISqlReportingQueries queries, ILogger<ReportsController> logger)
+        public ReportsController(IReportingQueries queries, ILogger<ReportsController> logger)
         {
             _queries = queries;
             _logger = logger;

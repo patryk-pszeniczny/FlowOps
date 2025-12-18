@@ -1,11 +1,12 @@
-﻿using FlowOps.Contracts.Response;
+﻿using FlowOps.Application.Reporting;
+using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
 namespace FlowOps.Infrastructure.Sql.Reporting
 {
-    public sealed class SqlReportingQueries : ISqlReportingQueries
+    public sealed class SqlReportingQueries : IReportingQueries
     {
         private readonly ISqlConnectionFactory _connectionFactory;
         public SqlReportingQueries(ISqlConnectionFactory connectionFactory)

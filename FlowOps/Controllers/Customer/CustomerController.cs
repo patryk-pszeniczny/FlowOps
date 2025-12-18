@@ -1,4 +1,6 @@
 ﻿using FlowOps.Application.Customer;
+using FlowOps.Application.Customers.Commands;
+using FlowOps.Application.Customers.Queries;
 using FlowOps.Contracts.Request.Customers;
 using FlowOps.Infrastructure.Sql;
 using Microsoft.AspNetCore.Mvc;
@@ -10,15 +12,16 @@ namespace FlowOps.Controllers.Customer
     [Route("api/customer")]
     public sealed class CustomerController : ControllerBase
     {
-        private readonly FlowOpsDbContext _database;
-        private readonly CustomerCommandService _command;
+        private readonly CreateCustomerCommandHandler _command;
+        private readonly CustomerQueries _queries;
         private readonly ILogger<CustomerController> _logger;
-        public CustomerController(FlowOpsDbContext database, 
-            CustomerCommandService command,
+        public CustomerController(
+            CreateCustomerCommandHandler command,
+            CustomerQueries queries,
             ILogger<CustomerController> logger)
         {
-            _database = database;
             _command = command;
+            _queries = queries;
             _logger = logger;
         }
         [HttpPost]
@@ -26,16 +29,20 @@ namespace FlowOps.Controllers.Customer
         {
             try
             {
-                var entity = await _command.CreateAsync(request, ct);
+                var customer = await _command.HandleAsync(new CreateCustomerCommand(
+                    request.Name,
+                    request.TaxId,
+                    request.Email
+                ), ct);
 
                 return CreatedAtAction(nameof(GetById), new { 
-                    customerId = entity.CustomerId 
+                    customerId = customer.CustomerId 
                 }, new{
-                    entity.CustomerId,
-                    entity.Name,
-                    entity.TaxId,
-                    entity.Email,
-                    entity.CreatedAt
+                    CustomerId = customer.Id,
+                    customer.Name,
+                    customer.TaxId,
+                    customer.Email,
+                    customer.CreatedAt
                 });
             }
             catch(InvalidOperationException ex)
@@ -50,18 +57,7 @@ namespace FlowOps.Controllers.Customer
         [HttpGet("{customerId:guid}")]
         public async Task<IActionResult> GetById(Guid customerId, CancellationToken ct)
         {
-            var customer = await _database.Customers
-                .AsNoTracking()
-                .Where(c => c.CustomerId == customerId)
-                .Select(c => new
-                {
-                    c.CustomerId,
-                    c.Name,
-                    c.TaxId,
-                    c.Email,
-                    c.CreatedAt
-                })
-                .FirstOrDefaultAsync(ct);
+            var customer = await _queries.GetAsync(customerId, ct);
             if (customer is null)
             {
                 return NotFound(new
@@ -74,21 +70,7 @@ namespace FlowOps.Controllers.Customer
         [HttpGet]
         public async Task<IActionResult> List([FromQuery] int take, CancellationToken ct = default)
         {
-            take = Math.Clamp(take, 1, 200);
-
-            var customers = await _database.Customers
-                .AsNoTracking()
-                .OrderByDescending(c => c.CreatedAt)
-                .Take(take)
-                .Select(c => new
-                {
-                    c.CustomerId,
-                    c.Name,
-                    c.TaxId,
-                    c.Email,
-                    c.CreatedAt
-                })
-                .ToListAsync(ct);
+            var customers = await _queries.ListAsync(take, ct);
             return Ok(customers);
         }
     }

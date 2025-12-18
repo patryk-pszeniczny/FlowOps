@@ -1,9 +1,7 @@
-﻿using FlowOps.Contracts.Item;
+﻿using FlowOps.Application.Subscriptions.Queries;
+using FlowOps.Contracts.Item;
 using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
-using FlowOps.Domain.Subscriptions;
-using FlowOps.Infrastructure.Sql.Reporting;
-using FlowOps.Reports.Stores;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,52 +11,27 @@ namespace FlowOps.Controllers
     [ApiController]
     public class SubscriptionQueriesController : ControllerBase
     {
-        private readonly ISubscriptionRepository _repo;
-        private readonly IReportingStore _store;
-        public SubscriptionQueriesController(ISubscriptionRepository repo,
-            IReportingStore store)
+        private readonly SubscriptionQueries _queries;
+        public SubscriptionQueriesController(SubscriptionQueries queries)
         {
-            _repo = repo;
-            _store = store;
+            _queries = queries;
         }
         [HttpGet("{id:guid}")]
-        public IActionResult GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         {
-            if (!_repo.TryGet(id, out var subscription) || subscription is null)
-            {
-                throw new KeyNotFoundException($"Subscription {id} not found.");
-            }
-            var response = new SubscriptionDetailsResponse(
-                subscription.Id,
-                subscription.CustomerId,
-                subscription.PlanCode,
-                subscription.Status.ToString()
-            );
+            var response = await _queries.GetDetailsAsync(id, ct);
             return Ok(response);
         }
         [HttpGet("by-customer/{customerId:guid}")]
-        public ActionResult<IEnumerable<SubscriptionListItem>> GetByCustomerId(Guid customerId)
+        public async Task<ActionResult<IEnumerable<SubscriptionListItem>>> GetByCustomerId(Guid customerId, CancellationToken ct)
         {
-            var report = _store.GetOrAdd(customerId);
-
-            var items = report.ActiveSubscriptionIds
-                .Select(id => _repo.TryGet(id, out var sub) ? sub : null)
-                .Where(sub => sub is not null)
-                .Select(sub => new SubscriptionListItem
-                (
-                    sub!.Id,
-                    sub.PlanCode,
-                    sub.Status.ToString()
-                ))
-                .OrderBy(x => x.PlanCode)
-                .ToList();
+            var items = await _queries.GetByCustomerAsync(customerId, ct);
             return Ok(items);
         }
         [HttpGet("sql/by-customer/{customerId:guid}")]
         public async Task<ActionResult<IEnumerable<SubscriptionSqlResponse>>> GetByCustomerSql(
             Guid customerId,
             [FromQuery] string? status,
-            [FromServices] ISqlReportingQueries queries,
             CancellationToken ct)
         {
             if (!string.IsNullOrWhiteSpace(status))
@@ -70,16 +43,15 @@ namespace FlowOps.Controllers
                 }
                 status = allowedStatus;
             }
-            var items = await queries.GetByCustomerAsync(customerId, status, ct);
+            var items = await _queries.GetByCustomerAsync(customerId, status, ct);
             return Ok(items);
         }
-        [HttpGet("sql/{subscriptionId:guid}")]
+        [HttpGet("{subscriptionId:guid}")]
         public async Task<ActionResult<SubscriptionSqlResponse>> GetByIdSql(
             Guid subscriptionId,
-            [FromServices] ISqlReportingQueries queries,
             CancellationToken ct)
         {
-            var item = await queries.GetSubscriptionByIdAsync(subscriptionId, ct);
+            var item = await _queries.GetByIdAsync(subscriptionId, ct);
             if (item is null)
             {
                 throw new KeyNotFoundException($"Subscription {subscriptionId} not found in SQL.");
@@ -94,7 +66,6 @@ namespace FlowOps.Controllers
             [FromQuery] string? orderBy = null,
             [FromQuery] string? orderDirection = null,
             [FromQuery] string? status = null,
-            [FromServices] ISqlReportingQueries queries = null!,
             CancellationToken ct = default)
         {
             if (page <= 0)
@@ -132,7 +103,7 @@ namespace FlowOps.Controllers
                 }
                 status = statusTrimmed;
             }
-            var pagedResult = await queries.GetByCustomerPagedAsync(
+            var pagedResult = await _queries.GetByCustomerPagedAsync(
                 customerId,
                 page,
                 pageSize,
@@ -146,10 +117,9 @@ namespace FlowOps.Controllers
         [HttpGet("sql/by-customer/{customerId:guid}/status-summary")]
         public async Task<ActionResult<SubscriptionStatusSummaryResponse>> GetStatusSummarySql(
             Guid customerId,
-            [FromServices] ISqlReportingQueries queries,
             CancellationToken ct)
         {
-            var summary = await queries.GetStatusSummaryAsync(customerId, ct);
+            var summary = await _queries.GetStatusSummarySqlAsync(customerId, ct);
             return Ok(summary);
         }
     }

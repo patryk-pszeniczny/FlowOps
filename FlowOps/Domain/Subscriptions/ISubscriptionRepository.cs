@@ -4,8 +4,8 @@ namespace FlowOps.Domain.Subscriptions
 {
     public interface ISubscriptionRepository
     {
-        void Add(Subscription subscription);
+        Task AddAsync(Subscription subscription, CancellationToken ct = default);
 
-        bool TryGet(Guid id, [MaybeNullWhen(false)] out Subscription? subscription);
+        Task<Subscription?> GetByIdAsync(Guid id, CancellationToken ct = default);
     }
 }

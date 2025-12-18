@@ -1,6 +1,5 @@
 ﻿using FlowOps.Contracts.Response;
-using FlowOps.Pricing;
-using Microsoft.AspNetCore.Http;
+using FlowOps.Domain.Plans;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FlowOps.Controllers

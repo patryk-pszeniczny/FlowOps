@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-
-namespace FlowOps.Pricing
+﻿namespace FlowOps.Domain.Plans
 {
     public interface IPlanPricing
     {

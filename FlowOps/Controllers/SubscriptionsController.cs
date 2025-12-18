@@ -1,10 +1,7 @@
-﻿using FlowOps.BuildingBlocks.Messaging;
-using FlowOps.Events;
-using Microsoft.AspNetCore.Mvc;
-using FlowOps.Domain.Subscriptions;
-using FlowOps.Application.Subscriptions;
+﻿using Microsoft.AspNetCore.Mvc;
 using FlowOps.Contracts.Request;
 using FlowOps.Infrastructure.Idempotency;
+using FlowOps.Application.Subscriptions.Commands;
 
 namespace FlowOps.Controllers
 {
@@ -14,17 +11,32 @@ namespace FlowOps.Controllers
     [Produces("application/json")]
     public class SubscriptionsController : ControllerBase
     {
-        private readonly SubscriptionCommandService _service;
+        private readonly CreateSubscriptionCommandHandler _createHandler;
+        private readonly CancelSubscriptionCommandHandler _cancelHandler;
+        private readonly SuspendSubscriptionCommandHandler _suspendHandler;
+        private readonly ResumeSubscriptionCommandHandler _resumeHandler;
+
         private readonly IIdempotencyStore _idempotency;
         private readonly ILogger<SubscriptionsController> _logger;
-        public SubscriptionsController(SubscriptionCommandService service, IIdempotencyStore idempotency, ILogger<SubscriptionsController> logger)
+       
+        public SubscriptionsController(
+            CreateSubscriptionCommandHandler createHandler,
+            CancelSubscriptionCommandHandler cancelHandler,
+            SuspendSubscriptionCommandHandler suspendHandler,
+            ResumeSubscriptionCommandHandler resumeHandler,
+            IIdempotencyStore idempotency,
+            ILogger<SubscriptionsController> logger)
         {
-            _service = service;
+            _createHandler = createHandler;
+            _cancelHandler = cancelHandler;
+            _suspendHandler = suspendHandler;
+            _resumeHandler = resumeHandler;
             _idempotency = idempotency;
             _logger = logger;
         }
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateSubscriptionRequest request)
+        public async Task<IActionResult> Create([FromBody] CreateSubscriptionRequest request, CancellationToken ct)
         {
             var idempotencyKey = Request.Headers.TryGetValue("Idempotency-Key", out var vals) ? vals.ToString() : null;
 
@@ -44,7 +56,7 @@ namespace FlowOps.Controllers
                 });
             }
             
-            var id = await _service.CreateAsync(request.CustomerId, request.PlanCode, DateTime.UtcNow);
+            var id = await _createHandler.HandleAsync(new CreateSubscriptionCommand(request.CustomerId, request.PlanCode), ct);
             if(!string.IsNullOrWhiteSpace(idempotencyKey))
             {
                 _idempotency.Set(idempotencyKey, id);
@@ -60,7 +72,7 @@ namespace FlowOps.Controllers
         [HttpPost("{id:guid}/cancel")]
         public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
         {
-            await _service.CancelAsync(id, DateTime.UtcNow, ct);
+            await _cancelHandler.HandleAsync(new CancelSubscriptionCommand(id), ct);
             return Ok(
                 new
                 {
@@ -72,7 +84,7 @@ namespace FlowOps.Controllers
         [HttpPost("{id:guid}/suspend")]
         public async Task<IActionResult> Suspend(Guid id, CancellationToken ct)
         {
-            await _service.SuspendAsync(id, DateTime.UtcNow, ct);
+            await _suspendHandler.HandleAsync(new SuspendSubscriptionCommand(id), ct);
             return Ok(
                 new
                 {

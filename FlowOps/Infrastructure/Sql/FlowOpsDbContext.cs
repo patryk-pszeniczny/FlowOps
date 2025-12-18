@@ -1,6 +1,6 @@
 ﻿
 
-using FlowOps.Infrastructure.Customer;
+using FlowOps.Infrastructure.Customers;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Sql.Inbox;
 using FlowOps.Infrastructure.Sql.Reporting.Customer;

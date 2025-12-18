@@ -1,7 +1,7 @@
 ﻿using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
+using FlowOps.Domain.Plans;
 using FlowOps.Events;
-using FlowOps.Pricing;
 
 namespace FlowOps.Services.Billing;
 
