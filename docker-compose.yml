@@ -14,7 +14,7 @@ services:
 
       FLOWOPS_ROLE: "api"
 
-      ConnectionStrings__ReportingDb: "${REPORTINGDB}"
+      ConnectionStrings__FlowOpsDatabase: "${REPORTINGDB}"
 
       RabbitMQ__HostName: "${RabbitMQ__HostName}"
       RabbitMQ__Port: "${RabbitMQ__Port}"
@@ -32,7 +32,7 @@ services:
 
       FLOWOPS_ROLE: "billing"
 
-      ConnectionStrings__ReportingDb: "${REPORTINGDB}"
+      ConnectionStrings__FlowOpsDatabase: "${REPORTINGDB}"
 
       RabbitMQ__HostName: "${RabbitMQ__HostName}"
       RabbitMQ__Port: "${RabbitMQ__Port}"
@@ -51,7 +51,7 @@ services:
 
       FLOWOPS_ROLE: "reporting"
 
-      ConnectionStrings__ReportingDb: "${REPORTINGDB}"
+      ConnectionStrings__FlowOpsDatabase: "${REPORTINGDB}"
 
 
       RabbitMQ__HostName: "${RabbitMQ__HostName}"

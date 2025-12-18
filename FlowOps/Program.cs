@@ -11,23 +11,18 @@ using FlowOps.Domain.Plans;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Events;
 using FlowOps.Infrastructure.Common;
-using FlowOps.Infrastructure.Customers;
 using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Persistence;
 using FlowOps.Infrastructure.Persistence.Reporting;
-using FlowOps.Infrastructure.Sql;
-using FlowOps.Infrastructure.Sql.Reporting;
-using FlowOps.Infrastructure.Subscriptions;
+using FlowOps.Infrastructure.Persistence.Repositories;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
 using FlowOps.Reports.Stores;
 using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
 using FlowOps.Services.Reporting.Customer;
-using FlowOps.Services.Reporting.Sql;
-using FlowOps.Services.Subscriptions.Sql;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -45,16 +40,18 @@ builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
 builder.Services.AddDbContext<FlowOpsDbContext>(options =>
 {
     var connectionString =
-        builder.Configuration.GetConnectionString("ReportingDb")
-        ?? builder.Configuration["ConnectionStrings:ReportingDb"]
-        ?? builder.Configuration["ConnectionStrings__ReportingDb"]
+        builder.Configuration.GetConnectionString("FlowOpsDatabase")
+        ?? builder.Configuration["ConnectionStrings:FlowOpsDatabase"]
+        ?? builder.Configuration["ConnectionStrings__FlowOpsDatabase"]
         ?? throw new InvalidOperationException(
-            "Missing connection string 'ReportingDb'. Set it via appsettings or env: ConnectionStrings__ReportingDb.");
+            "Missing connection string 'FlowOpsDatabase'. Set it via appsettings or env: ConnectionStrings__FlowOpsDatabase.");
 
     options.UseSqlServer(connectionString);
 });
 
 builder.Services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
+builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+builder.Services.AddScoped<CustomerDirectoryQueries>();
 
 builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStore>();
 
@@ -85,15 +82,11 @@ if (isBilling)
 
 if (isReporting)
 {
-    builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
-
-    builder.Services.AddSingleton<IReportingQueries, SqlReportingQueries>();
-    builder.Services.AddScoped<CustomerDirectoryQueries>();
+    builder.Services.AddScoped<IReportingQueries, EfReportingQueries>();
 
     builder.Services.AddScoped<IIntegrationEventHandler<CustomerCreatedEvent>, CustomerCreatedEventHandler>();
 
-    builder.Services.AddHostedService<SqlSubscriptionsProjector>();
-    builder.Services.AddHostedService<SqlReportingProjector>();
+    builder.Services.AddHostedService<EfReportingProjector>();
     builder.Services.AddHostedService<CustomerDirectoryListener>();
 
     builder.Services.AddSingleton<EventRecorder>();
@@ -106,7 +99,7 @@ if (isApi)
     builder.Services.AddOpenApi();
     builder.Services.AddAuthorization();
 
-    builder.Services.AddSingleton<ISubscriptionRepository, InMemorySubscriptionRepository>();
+    builder.Services.AddScoped<ISubscriptionRepository, EfSubscriptionRepository>();
 
     builder.Services.AddScoped<CreateSubscriptionCommandHandler>();
     builder.Services.AddScoped<CancelSubscriptionCommandHandler>();
@@ -118,8 +111,8 @@ if (isApi)
     builder.Services.AddScoped<CreateCustomerCommandHandler>();
     builder.Services.AddScoped<CustomerQueries>();
 
-    builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
-    builder.Services.AddSingleton<IReportingQueries, SqlReportingQueries>();
+    builder.Services.AddScoped<IReportingQueries, EfReportingQueries>();
+    builder.Services.AddHostedService<EfReportingProjector>();
 
 }
 
