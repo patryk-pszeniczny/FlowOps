@@ -71,18 +71,20 @@ if (isBilling)
 if (isReporting)
 {
     builder.Services.AddSingleton<ISqlConnectionFactory, SqlConnectionFactory>();
+
+    builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
+    builder.Services.AddScoped<CustomerDirectoryQueries>();
+
+    builder.Services.AddScoped<IIntegrationEventHandler<CustomerCreatedEvent>, CustomerCreatedEventHandler>();
+
     builder.Services.AddHostedService<SqlSubscriptionsProjector>();
     builder.Services.AddHostedService<SqlReportingProjector>();
+    builder.Services.AddHostedService<CustomerDirectoryListener>();
 
     builder.Services.AddSingleton<EventRecorder>();
     builder.Services.AddHostedService<EventRecorderListener>();
-
-    builder.Services.AddSingleton<ISqlReportingQueries, SqlReportingQueries>();
-    builder.Services.AddHostedService<CustomerDirectoryListener>();
-
-    builder.Services.AddScoped<CustomerDirectoryQueries>();
-    builder.Services.AddScoped<IIntegrationEventHandler<CustomerCreatedEvent>, CustomerCreatedEventHandler>();
 }
+
 
 if (isApi)
 {

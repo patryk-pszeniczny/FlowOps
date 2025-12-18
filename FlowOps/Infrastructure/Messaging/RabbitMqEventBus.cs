@@ -1,12 +1,15 @@
-﻿using System.Collections.Concurrent;
-using System.Text;
-using System.Text.Json;
-using FlowOps.BuildingBlocks.Integration;
+﻿using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Channels;
 
 namespace FlowOps.Infrastructure.Messaging
 {
@@ -23,6 +26,10 @@ namespace FlowOps.Infrastructure.Messaging
 
         private readonly SemaphoreSlim _connectLock = new(1, 1);
         private readonly ConcurrentDictionary<string, byte> _subscriptions = new();
+
+        private readonly SemaphoreSlim _connectGate = new(1, 1);
+        private const ushort PrefetchCount = 16;
+
 
         public RabbitMqEventBus(
             IConfiguration configuration,
@@ -57,35 +64,40 @@ namespace FlowOps.Infrastructure.Messaging
                 RequestedConnectionTimeout = TimeSpan.FromSeconds(15),
             };
 
-
             _serializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         }
 
-        private async Task EnsureConnectedAsync(CancellationToken cancellationToken)
+        private async Task EnsureConnectedAsync(CancellationToken ct)
         {
             if (_connection is { IsOpen: true } && _channel is { IsOpen: true })
-            {
                 return;
-            }
-            await _connectLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+            await _connectGate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
                 if (_connection is { IsOpen: true } && _channel is { IsOpen: true })
-                {
                     return;
+
+                if (_channel is not null)
+                {
+                    try { await _channel.CloseAsync(replyCode: 200, replyText: "Reconnecting", abort: false, cancellationToken: CancellationToken.None).ConfigureAwait(false); }
+                    catch { }
+                    await _channel.DisposeAsync().ConfigureAwait(false);
+                    _channel = null;
                 }
-                _logger.LogInformation(
-                    "RabbitMQ: connecting to {Host}:{Port}...",
-                    _factory.HostName,
-                    _factory.Port);
 
-                _connection = await _factory
-                    .CreateConnectionAsync(cancellationToken)
-                    .ConfigureAwait(false);
+                if (_connection is not null)
+                {
+                    try { await _connection.CloseAsync(reasonCode: 200, reasonText: "Reconnecting", timeout: TimeSpan.FromSeconds(5), abort: false, cancellationToken: CancellationToken.None).ConfigureAwait(false); }
+                    catch { }
+                    await _connection.DisposeAsync().ConfigureAwait(false);
+                    _connection = null;
+                }
 
-                _channel = await _connection
-                    .CreateChannelAsync(options: null, cancellationToken: cancellationToken)
-                    .ConfigureAwait(false);
+                _logger.LogInformation("RabbitMQ: connecting to {Host}:{Port}...", _factory.HostName, _factory.Port);
+
+                _connection = await _factory.CreateConnectionAsync(ct).ConfigureAwait(false);
+                _channel = await _connection.CreateChannelAsync(options: null, cancellationToken: ct).ConfigureAwait(false);
 
                 await _channel.ExchangeDeclareAsync(
                     exchange: ExchangeName,
@@ -95,17 +107,22 @@ namespace FlowOps.Infrastructure.Messaging
                     arguments: null,
                     passive: false,
                     noWait: false,
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                    cancellationToken: ct).ConfigureAwait(false);
 
-                _logger.LogInformation(
-                    "RabbitMQ: connected and using exchange '{Exchange}'.",
-                    ExchangeName);
+                await _channel.BasicQosAsync(
+                    prefetchSize: 0,
+                    prefetchCount: PrefetchCount,
+                    global: false,
+                    cancellationToken: ct).ConfigureAwait(false);
+
+                _logger.LogInformation("RabbitMQ: connected and using exchange '{Exchange}'.", ExchangeName);
             }
             finally
             {
-                _connectLock.Release();
+                _connectGate.Release();
             }
         }
+
 
         public async Task PublishAsync<T>(T @event) where T : IntegrationEvent
         {
@@ -145,21 +162,10 @@ namespace FlowOps.Infrastructure.Messaging
         {
             if (handler is null) throw new ArgumentNullException(nameof(handler));
 
+            var subscriber = ResolveSubscriberName(handler);
             var eventType = typeof(T);
             var routingKey = eventType.FullName ?? eventType.Name;
-
-            var subscriberName = handler.Target?.GetType().Name ?? "anonymous";
-            var queueName = $"flowops.{subscriberName}.{eventType.Name}".ToLowerInvariant();
-
-            var subscriptionKey = $"{queueName}|{routingKey}";
-            if(!_subscriptions.TryAdd(subscriptionKey, 0))
-            {
-                _logger.LogInformation(
-                      "RabbitMQ: already subscribed. queue='{Queue}', rk='{RoutingKey}'.",
-                      queueName,
-                      routingKey);
-                return;
-            }
+            var queueName = $"flowops.{subscriber}.{eventType.Name}".ToLowerInvariant();
 
             _ = Task.Run(async () =>
             {
@@ -196,53 +202,58 @@ namespace FlowOps.Infrastructure.Messaging
                             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
                             var message = JsonSerializer.Deserialize<T>(json, _serializerOptions);
 
-                            if (message != null)
-                            {
+                            if (message is not null)
                                 await handler(message).ConfigureAwait(false);
-                            }
-                            await _channel.BasicAckAsync(
-                                deliveryTag: ea.DeliveryTag,
-                                multiple: false).ConfigureAwait(false);
+
+                            await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false).ConfigureAwait(false);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(
-                                ex,
-                                "RabbitMQ: error while message of type {EventType}.",
-                                eventType.Name);
-
-                            await _channel.BasicNackAsync(
-                                deliveryTag: ea.DeliveryTag,
-                                multiple: false,
-                                requeue: true).ConfigureAwait(false);
+                            _logger.LogError(ex, "RabbitMQ: error while handling message of type {EventType}.", eventType.Name);
+                            await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true).ConfigureAwait(false);
                         }
                     };
 
-                    await _channel.BasicConsumeAsync(
-                        queue: queueName,
-                        autoAck: false,
-                        consumer: consumer,
-                        cancellationToken: ct).ConfigureAwait(false);
+                    await _channel.BasicConsumeAsync(queue: queueName, autoAck: false, consumer: consumer).ConfigureAwait(false);
 
                     _logger.LogInformation(
                         "RabbitMQ: subscribed. subscriber='{Subscriber}', event='{Event}', queue='{Queue}', rk='{RoutingKey}'.",
-                        subscriberName,
+                        subscriber,
                         eventType.Name,
                         queueName,
                         routingKey);
-
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(
-                        ex,
-                        "RabbitMQ: failed to subscribe to {EventType}.",
-                        eventType.Name);
+                    _logger.LogError(ex, "RabbitMQ: failed to subscribe to {EventType}.", eventType.Name);
                 }
             });
+    }
+
+    private static string ResolveSubscriberName(Delegate handler)
+    {
+        var t = handler.Method.DeclaringType ?? handler.Target?.GetType();
+        if (t is null) return "unknown";
+
+        while (t.IsNested && (t.Name.Contains("DisplayClass") || t.IsDefined(typeof(CompilerGeneratedAttribute), inherit: false)))
+        {
+            t = t.DeclaringType ?? t;
+            if (t.DeclaringType is null) break;
         }
 
-        public async ValueTask DisposeAsync()
+        return Sanitize(t.Name);
+    }
+
+    private static readonly Regex _invalid = new(@"[^a-zA-Z0-9\-_.]+", RegexOptions.Compiled);
+
+    private static string Sanitize(string value)
+    {
+        value = _invalid.Replace(value, "");
+        return string.IsNullOrWhiteSpace(value) ? "unknown" : value;
+    }
+
+
+    public async ValueTask DisposeAsync()
         {
             if (_channel is not null)
             {

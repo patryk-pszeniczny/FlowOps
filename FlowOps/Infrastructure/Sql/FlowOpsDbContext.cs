@@ -2,6 +2,7 @@
 
 using FlowOps.Infrastructure.Customer;
 using FlowOps.Infrastructure.Idempotency;
+using FlowOps.Infrastructure.Sql.Inbox;
 using FlowOps.Infrastructure.Sql.Reporting.Customer;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,8 @@ namespace FlowOps.Infrastructure.Sql
         public DbSet<IntegrationEventEntity> IntegrationEvents => Set<IntegrationEventEntity>();
         public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
         public DbSet<CustomerDirectoryEntry> CustomerDirectoryEntries => Set<CustomerDirectoryEntry>();
+
+        public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -88,6 +91,19 @@ namespace FlowOps.Infrastructure.Sql
                     .HasMaxLength(256);
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
+            });
+            modelBuilder.Entity<InboxMessage>(entity =>
+            {
+                entity.ToTable("InboxMessages");
+                entity.HasKey(e => new {e.Consumer, e.EventId});
+
+                entity.Property(e => e.Consumer)
+                    .HasMaxLength(200)
+                    .IsRequired();
+                entity.Property(e => e.ProcessedAt)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.ProcessedAt);
             });
         }
     }

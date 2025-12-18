@@ -53,5 +53,6 @@ namespace FlowOps.BuildingBlocks.Messaging
         {
              _inner.Subscribe(handler);
         }
+
     }
 }
