@@ -1,6 +1,6 @@
 ﻿using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
-using FlowOps.Infrastructure.Sql;
+using FlowOps.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 

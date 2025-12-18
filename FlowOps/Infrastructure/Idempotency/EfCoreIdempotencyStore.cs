@@ -1,5 +1,6 @@
 ﻿
 using FlowOps.Infrastructure.Persistence;
+using FlowOps.Infrastructure.Persistence.Entities;
 
 namespace FlowOps.Infrastructure.Idempotency
 {

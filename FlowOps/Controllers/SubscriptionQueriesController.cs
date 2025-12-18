@@ -2,7 +2,6 @@
 using FlowOps.Contracts.Item;
 using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FlowOps.Controllers
@@ -119,7 +118,7 @@ namespace FlowOps.Controllers
             Guid customerId,
             CancellationToken ct)
         {
-            var summary = await _queries.GetStatusSummaryAsync(customerId, ct);
+            var summary = await _queries.GetStatusSummarySqlAsync(customerId, ct);
             return Ok(summary);
         }
     }

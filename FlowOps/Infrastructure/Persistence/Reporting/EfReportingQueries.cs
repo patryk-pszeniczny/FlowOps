@@ -2,15 +2,14 @@
 using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
 using FlowOps.Domain.Subscriptions;
-using FlowOps.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace FlowOps.Infrastructure.Persistence.Reporting
 {
     public sealed class EfReportingQueries : IReportingQueries
     {
         private readonly FlowOpsDbContext _dbContext;
-
         public EfReportingQueries(FlowOpsDbContext dbContext)
         {
             _dbContext = dbContext;
@@ -57,7 +56,7 @@ namespace FlowOps.Infrastructure.Persistence.Reporting
 
             var items = await query
                 .OrderByDescending(s => s.ActivatedAt ?? DateTime.MinValue)
-                .Select(MapToResponse)
+                .Select(SubscriptionProjection)
                 .ToListAsync(ct);
 
             return items;
@@ -65,11 +64,11 @@ namespace FlowOps.Infrastructure.Persistence.Reporting
 
         public async Task<SubscriptionSqlResponse?> GetSubscriptionByIdAsync(Guid subscriptionId, CancellationToken ct = default)
         {
-            var subscription = await _dbContext.Subscriptions
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == subscriptionId, ct);
-
-            return subscription is null ? null : MapToResponse(subscription);
+            return await _dbContext.Subscriptions
+                    .AsNoTracking()
+                    .Where(s => s.Id == subscriptionId)
+                    .Select(SubscriptionProjection)
+                    .FirstOrDefaultAsync(ct);
         }
 
         public async Task<PagedResult<SubscriptionSqlResponse>> GetByCustomerPagedAsync(
@@ -113,7 +112,7 @@ namespace FlowOps.Infrastructure.Persistence.Reporting
             var items = await query
                 .Skip(skip)
                 .Take(pageSize)
-                .Select(MapToResponse)
+                .Select(SubscriptionProjection)
                 .ToListAsync(ct);
 
             var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
@@ -149,17 +148,15 @@ namespace FlowOps.Infrastructure.Persistence.Reporting
                 Total: total);
         }
 
-        private static SubscriptionSqlResponse MapToResponse(Subscription subscription)
-        {
-            return new SubscriptionSqlResponse(
-                subscription.Id,
-                subscription.CustomerId,
-                subscription.PlanCode,
-                subscription.Status.ToString(),
-                subscription.ActivatedAt ?? DateTime.MinValue,
-                subscription.SuspendedAt,
-                subscription.ResumedAt,
-                subscription.CancelledAt);
-        }
+        private Expression<Func<Subscription, SubscriptionSqlResponse>> SubscriptionProjection =
+            s => new SubscriptionSqlResponse(
+                s.Id,
+                s.CustomerId,
+                s.PlanCode,
+                s.Status.ToString(),
+                s.ActivatedAt ?? DateTime.MinValue,
+                s.SuspendedAt,
+                s.ResumedAt,
+                s.CancelledAt);
     }
 }

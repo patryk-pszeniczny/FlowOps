@@ -1,9 +1,7 @@
 ﻿using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
 using FlowOps.Infrastructure.Persistence.Entities;
-using FlowOps.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 
 namespace FlowOps.Infrastructure.Persistence.Reporting
 {

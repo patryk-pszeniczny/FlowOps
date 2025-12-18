@@ -18,11 +18,13 @@ namespace FlowOps.Application.Subscriptions.Commands
             ISubscriptionRepository repository,
             IEventBus eventBus,
             ITimeProvider clock,
+            IUnitOfWork unitOfWork,
             ILogger<ResumeSubscriptionCommandHandler> logger)
         {
             _repository = repository;
             _eventBus = eventBus;
             _clock = clock;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
         public async Task HandleAsync(ResumeSubscriptionCommand command, CancellationToken ct = default)
