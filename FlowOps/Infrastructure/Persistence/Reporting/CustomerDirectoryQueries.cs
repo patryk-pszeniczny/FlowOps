@@ -2,7 +2,7 @@
 using FlowOps.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace FlowOps.Infrastructure.Sql.Reporting
+namespace FlowOps.Infrastructure.Persistence.Reporting
 {
     public sealed class CustomerDirectoryQueries
     {

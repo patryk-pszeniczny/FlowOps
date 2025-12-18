@@ -16,6 +16,7 @@ using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Persistence;
+using FlowOps.Infrastructure.Persistence.Reporting;
 using FlowOps.Infrastructure.Sql;
 using FlowOps.Infrastructure.Sql.Reporting;
 using FlowOps.Infrastructure.Subscriptions;

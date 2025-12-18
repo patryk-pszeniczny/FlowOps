@@ -27,7 +27,6 @@
 
   <ItemGroup>
     <Folder Include="Infrastructure\Customers\" />
-    <Folder Include="Infrastructure\Sql\Reporting\Customer\" />
   </ItemGroup>
 
 </Project>
