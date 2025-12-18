@@ -33,8 +33,8 @@ namespace FlowOps.Application.Subscriptions.Commands
                 command.PlanCode);
             var activaed = subscription.Activate(_clock.UtcNow);
 
-            await _repository.AddSync(subscription, ct);
-            await _eventBus.PublishAsync(activaed, ct);
+            await _repository.AddAsync(subscription, ct);
+            await _eventBus.PublishAsync(activaed);
 
             return subscription.Id;
         }

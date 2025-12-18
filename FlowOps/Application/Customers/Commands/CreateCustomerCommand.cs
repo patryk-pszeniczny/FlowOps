@@ -1,5 +1,6 @@
 ﻿using FlowOps.Application.Common;
 using FlowOps.BuildingBlocks.Messaging;
+using FlowOps.Domain.Customers;
 using FlowOps.Events;
 
 namespace FlowOps.Application.Customers.Commands
@@ -22,9 +23,9 @@ namespace FlowOps.Application.Customers.Commands
             _clock = clock;
             _logger = logger;
         }
-        public async Task<Customer> HandleAsync(CreateCustomerCommand command, CancellationToken cancellationToken = default)
+        public async Task<Customer> HandleAsync(CreateCustomerCommand command, CancellationToken ct = default)
         {
-            var customer = Customer.Create(command.name, command.TaxId, command.Email, _timeProvider.UtcNow);
+            var customer = Customer.Create(command.name, command.TaxId, command.Email, _clock.UtcNow);
             if (!string.IsNullOrWhiteSpace(customer.TaxId))
             {
                 if (await _repository.ExistsByTaxIdAsync(customer.TaxId!, ct))

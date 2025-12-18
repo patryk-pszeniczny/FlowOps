@@ -1,11 +1,7 @@
-﻿using FlowOps.Application.Customer;
-using FlowOps.Application.Customers.Commands;
+﻿using FlowOps.Application.Customers.Commands;
 using FlowOps.Application.Customers.Queries;
 using FlowOps.Contracts.Request.Customers;
-using FlowOps.Infrastructure.Sql;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-
 namespace FlowOps.Controllers.Customer
 {
     [ApiController]
@@ -36,7 +32,7 @@ namespace FlowOps.Controllers.Customer
                 ), ct);
 
                 return CreatedAtAction(nameof(GetById), new { 
-                    customerId = customer.CustomerId 
+                    customerId = customer.Id 
                 }, new{
                     CustomerId = customer.Id,
                     customer.Name,

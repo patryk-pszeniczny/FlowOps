@@ -95,7 +95,7 @@ namespace FlowOps.Controllers
         [HttpPost("{id:guid}/resume")]
         public async Task<IActionResult> Resume(Guid id, CancellationToken ct)
         {
-            await _service.ResumeAsync(id, DateTime.UtcNow, ct);
+            await _resumeHandler.HandleAsync(new ResumeSubscriptionCommand(id), ct);
             return Ok(
                 new
                 {

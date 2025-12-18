@@ -1,6 +1,7 @@
 ﻿using FlowOps.Application.Reporting;
 using FlowOps.Contracts.Item;
 using FlowOps.Contracts.Response;
+using FlowOps.Contracts.Result;
 using FlowOps.Domain.Subscriptions;
 using FlowOps.Reports.Stores;
 
@@ -52,6 +53,35 @@ namespace FlowOps.Application.Subscriptions.Queries
             return items
                 .OrderBy(x => x.PlanCode)
                 .ToList();
+        }
+        public Task<IReadOnlyList<SubscriptionSqlResponse>> GetByCustomerAsync(
+           Guid customerId,
+           string? status,
+           CancellationToken ct = default)
+        {
+            return _reportingQueries.GetByCustomerAsync(customerId, status, ct);
+        }
+
+        public Task<SubscriptionSqlResponse?> GetByIdAsync(Guid subscriptionId, CancellationToken ct = default)
+        {
+            return _reportingQueries.GetSubscriptionByIdAsync(subscriptionId, ct);
+        }
+
+        public Task<PagedResult<SubscriptionSqlResponse>> GetByCustomerPagedAsync(
+            Guid customerId,
+            int page,
+            int pageSize,
+            string? orderBy,
+            string? orderDirection,
+            string? status,
+            CancellationToken ct = default)
+        {
+            return _reportingQueries.GetByCustomerPagedAsync(customerId, page, pageSize, orderBy, orderDirection, status, ct);
+        }
+
+        public Task<SubscriptionStatusSummaryResponse> GetStatusSummaryAsync(Guid customerId, CancellationToken ct = default)
+        {
+            return _reportingQueries.GetStatusSummaryAsync(customerId, ct);
         }
 
     }

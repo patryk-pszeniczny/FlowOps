@@ -1,9 +1,10 @@
-﻿namespace FlowOps.Application.Customers.Queries
+﻿using FlowOps.Domain.Customers;
+namespace FlowOps.Application.Customers.Queries
 {
     public sealed class CustomerQueries
     {
-        private readonly ICustomerRepostiory _repository;
-        public CustomerQueries(ICustomerRepostiory repository)
+        private readonly ICustomerRepository _repository;
+        public CustomerQueries(ICustomerRepository repository)
         {
             _repository = repository;
         }

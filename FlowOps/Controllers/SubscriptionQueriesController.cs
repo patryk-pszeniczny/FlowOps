@@ -46,7 +46,7 @@ namespace FlowOps.Controllers
             var items = await _queries.GetByCustomerAsync(customerId, status, ct);
             return Ok(items);
         }
-        [HttpGet("{subscriptionId:guid}")]
+        [HttpGet("sql/{subscriptionId:guid}")]
         public async Task<ActionResult<SubscriptionSqlResponse>> GetByIdSql(
             Guid subscriptionId,
             CancellationToken ct)
@@ -119,7 +119,7 @@ namespace FlowOps.Controllers
             Guid customerId,
             CancellationToken ct)
         {
-            var summary = await _queries.GetStatusSummarySqlAsync(customerId, ct);
+            var summary = await _queries.GetStatusSummaryAsync(customerId, ct);
             return Ok(summary);
         }
     }
