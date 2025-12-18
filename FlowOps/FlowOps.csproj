@@ -25,4 +25,9 @@
     <ProjectReference Include="..\FlowOps.BuildingBlocks\FlowOps.BuildingBlocks.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Infrastructure\Customers\" />
+    <Folder Include="Infrastructure\Sql\Reporting\Customer\" />
+  </ItemGroup>
+
 </Project>

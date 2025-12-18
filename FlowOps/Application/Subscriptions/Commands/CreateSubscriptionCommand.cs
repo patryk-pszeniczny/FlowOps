@@ -12,17 +12,23 @@ namespace FlowOps.Application.Subscriptions.Commands
         private readonly IEventBus _eventBus;
         private readonly IPlanPricing _pricing;
         private readonly ITimeProvider _clock;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<CreateSubscriptionCommandHandler> _logger;
 
         public CreateSubscriptionCommandHandler(
             ISubscriptionRepository repository,
             IEventBus eventBus,
             IPlanPricing pricing,
-            ITimeProvider clock)
+            ITimeProvider clock,
+            IUnitOfWork unitOfWork,
+            ILogger<CreateSubscriptionCommandHandler> logger)
         {
             _repository = repository;
             _eventBus = eventBus;
             _pricing = pricing;
             _clock = clock;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
         }
         public async Task<Guid> HandleAsync(CreateSubscriptionCommand command, CancellationToken ct = default)
         {
@@ -31,11 +37,16 @@ namespace FlowOps.Application.Subscriptions.Commands
             var subscription = Subscription.Create(
                 command.CustomerId,
                 command.PlanCode);
-            var activaed = subscription.Activate(_clock.UtcNow);
+
+            var activated = subscription.Activate(_clock.UtcNow);
 
             await _repository.AddAsync(subscription, ct);
-            await _eventBus.PublishAsync(activaed);
+            await _unitOfWork.SaveChangesAsync(ct);
+            await _eventBus.PublishAsync(activated);
 
+
+            _logger.LogInformation("Subscription {SubscriptionId} created and activated for customer {CustomerId} on plan {PlanCode}.",
+                subscription.Id, command.CustomerId, command.PlanCode);
             return subscription.Id;
         }
     }

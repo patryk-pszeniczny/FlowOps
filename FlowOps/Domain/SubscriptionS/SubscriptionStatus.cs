@@ -4,7 +4,7 @@
     {
         None = 0,
         Active = 1,
-        Canceled = 2,
+        Cancelled = 2,
         Expired = 3,
         Suspended = 4
     }

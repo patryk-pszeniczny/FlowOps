@@ -1,5 +1,5 @@
 ﻿
-using FlowOps.Infrastructure.Sql;
+using FlowOps.Infrastructure.Persistence;
 
 namespace FlowOps.Infrastructure.Idempotency
 {

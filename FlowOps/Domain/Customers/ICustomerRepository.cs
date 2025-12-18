@@ -8,7 +8,7 @@
 
         Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
 
-        Task<Customer?> GetByIdAsync(Guid id, CancellationToken ct = default);
+        Task<Customer?> GetByIdAsync(Guid id, bool asNoTracking = false, CancellationToken ct = default);
 
         Task<IReadOnlyList<Customer>> ListAsync(int take, CancellationToken ct = default);
     }

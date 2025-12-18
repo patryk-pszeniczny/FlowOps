@@ -1,4 +1,5 @@
-﻿using FlowOps.Infrastructure.Sql.Reporting.Customer;
+﻿using FlowOps.Infrastructure.Persistence;
+using FlowOps.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlowOps.Infrastructure.Sql.Reporting

@@ -1,5 +1,5 @@
 ﻿using System.Data;
-using FlowOps.Infrastructure.Sql;
+using FlowOps.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -7,22 +7,21 @@ namespace FlowOps.Infrastructure.Health
 {
     public sealed class SqlHealthCheck : IHealthCheck
     {
-        private readonly ISqlConnectionFactory _factory;
-        public SqlHealthCheck(ISqlConnectionFactory factory)
+        private readonly FlowOpsDbContext _dbContex;
+        public SqlHealthCheck(FlowOpsDbContext dbContext)
         {
-            _factory = factory;
+            _dbContex = dbContext;
         }
 
         public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
         {
             try
             {
-                await using var connection = await _factory.CreateOpenAsync(cancellationToken);
-                await using var command = connection.CreateCommand();
-                command.CommandType = CommandType.Text;
-                command.CommandText = "SELECT 1;";
-                await command.ExecuteScalarAsync(cancellationToken);
-                return HealthCheckResult.Healthy("SQL database is reachable.");
+                if(await _dbContex.Database.CanConnectAsync(cancellationToken))
+                {
+                    return HealthCheckResult.Healthy("SQL database is reachable.");
+                }
+                return HealthCheckResult.Unhealthy("SQL databaase is not reachable.");
             }
             catch(SqlException ex)
             {

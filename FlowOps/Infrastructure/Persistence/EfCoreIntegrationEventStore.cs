@@ -1,9 +1,10 @@
 ﻿using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
+using FlowOps.Infrastructure.Sql;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
-namespace FlowOps.Infrastructure.Sql
+namespace FlowOps.Infrastructure.Persistence
 {
     public sealed class EfCoreIntegrationEventStore : IIntegrationEventStore
     {

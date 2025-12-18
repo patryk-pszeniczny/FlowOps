@@ -6,6 +6,8 @@ namespace FlowOps.Domain.Subscriptions
     {
         Task AddAsync(Subscription subscription, CancellationToken ct = default);
 
-        Task<Subscription?> GetByIdAsync(Guid id, CancellationToken ct = default);
+        Task<Subscription?> GetByIdAsync(Guid id, bool asNoTracking = false, CancellationToken ct = default);
+
+        Task<IReadOnlyList<Subscription>> GeyByCustomerAsync(Guid customerId, CancellationToken ct = default);
     }
 }

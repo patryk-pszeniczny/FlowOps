@@ -10,7 +10,7 @@ namespace FlowOps.Application.Customers.Queries
         }
         public async Task<CustomerDto?> GetAsync(Guid customerId, CancellationToken ct = default)
         {
-            var customer = await _repository.GetByIdAsync(customerId, ct);
+            var customer = await _repository.GetByIdAsync(customerId, asNoTracking: true, ct: ct);
             return customer is null
                 ? null
                 : Map(customer);

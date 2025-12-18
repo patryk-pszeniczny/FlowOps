@@ -12,6 +12,8 @@ namespace FlowOps.Domain.Subscriptions
         public DateTime? ActivatedAt { get; private set; }
         public DateTime? ExpiresAt { get; private set; }
         public DateTime? CancelledAt { get; private set; }
+        public DateTime? SuspendedAt { get; private set; }
+        public DateTime? ResumedAt { get; private set; }
 
         private Subscription() { } //For serializer
 
@@ -34,12 +36,15 @@ namespace FlowOps.Domain.Subscriptions
         {
             if(Status == SubscriptionStatus.Active)
                 throw new InvalidOperationException("Subscription is already active.");
-            if(Status is SubscriptionStatus.Canceled or SubscriptionStatus.Expired)
+            if(Status is SubscriptionStatus.Cancelled or SubscriptionStatus.Expired)
                 throw new InvalidOperationException("Cannot activate a canceled or expired subscription.");
 
             Status = SubscriptionStatus.Active;
             ActivatedAt = utcNow;
 
+            SuspendedAt = null;
+            ResumedAt = null;
+            CancelledAt = null;
             ExpiresAt = utcNow.AddMonths(1);
 
             return new SubscriptionActivatedEvent
@@ -54,7 +59,7 @@ namespace FlowOps.Domain.Subscriptions
             if(Status != SubscriptionStatus.Active)
                 throw new InvalidOperationException("Only active subscriptions can be canceled.");
 
-            Status = SubscriptionStatus.Canceled;
+            Status = SubscriptionStatus.Cancelled;
             CancelledAt = utcNow;
         }
         public void Expire(DateTime utcNow)
@@ -75,12 +80,15 @@ namespace FlowOps.Domain.Subscriptions
             if(Status != SubscriptionStatus.Active)
                 throw new InvalidOperationException("Only active subscriptions can be suspended.");
             Status = SubscriptionStatus.Suspended;
+            SuspendedAt = utcNow;
         }
         public void Resume(DateTime utcNow)
         {
             if(Status != SubscriptionStatus.Suspended)
                 throw new InvalidOperationException("Only suspended subscriptions can be resumed.");
             Status = SubscriptionStatus.Active;
+            ResumedAt = utcNow;
+            SuspendedAt = null;
         }
 
     }

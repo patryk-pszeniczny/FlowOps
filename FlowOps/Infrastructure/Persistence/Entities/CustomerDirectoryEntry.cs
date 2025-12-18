@@ -1,4 +1,4 @@
-﻿namespace FlowOps.Infrastructure.Sql.Reporting.Customer
+﻿namespace FlowOps.Infrastructure.Persistence.Entities
 {
     public sealed class CustomerDirectoryEntry
     {

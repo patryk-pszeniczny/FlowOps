@@ -11,25 +11,30 @@ namespace FlowOps.Application.Subscriptions.Commands
         private readonly ISubscriptionRepository _repository;
         private readonly IEventBus _eventBus;
         private readonly ITimeProvider _clock;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<SuspendSubscriptionCommandHandler> _logger;
 
         public SuspendSubscriptionCommandHandler(
             ISubscriptionRepository repository,
             IEventBus eventBus,
             ITimeProvider clock,
+            IUnitOfWork unitOfWork,
             ILogger<SuspendSubscriptionCommandHandler> logger)
         {
             _repository = repository;
             _eventBus = eventBus;
             _clock = clock;
+            _unitOfWork = unitOfWork;
             _logger = logger;
         }
         public async Task HandleAsync(SuspendSubscriptionCommand command, CancellationToken ct = default)
         {
-            var subscription = await _repository.GetByIdAsync(command.SubscriptionId, ct)
+            var subscription = await _repository.GetByIdAsync(command.SubscriptionId, asNoTracking: false, ct: ct)
                 ?? throw new KeyNotFoundException($"Subscription with ID '{command.SubscriptionId}' not found.");
 
             subscription.Suspend(_clock.UtcNow);
+
+            await _unitOfWork.SaveChangesAsync(ct);
 
             await _eventBus.PublishAsync(new SubscriptionSuspendedEvent
             {

@@ -15,11 +15,11 @@
             CreatedAt = createdAt;
         }
 
-        public Guid Id { get; }
-        public string Name { get; }
-        public string? TaxId { get; }
-        public string? Email { get; }
-        public DateTime CreatedAt { get; }
+        public Guid Id { get; private set; }
+        public string Name { get; private set; } = string.Empty;
+        public string? TaxId { get; private set; }
+        public string? Email { get; private set; }
+        public DateTime CreatedAt { get; private set; }
 
         public static Customer Create(string name, string? taxId, string? email, DateTime createdAtUtc)
         {
