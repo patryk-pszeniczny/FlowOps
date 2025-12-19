@@ -1,4 +1,4 @@
-﻿using FlowOps.Reports.Models;
+﻿using FlowOps.Infrastructure.Persistence.Entities;
 namespace FlowOps.Reports.Stores
 {
     public interface IReportingStore

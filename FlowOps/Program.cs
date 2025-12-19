@@ -19,7 +19,6 @@ using FlowOps.Infrastructure.Persistence.Reporting;
 using FlowOps.Infrastructure.Persistence.Repositories;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
-using FlowOps.Reports.Stores;
 using FlowOps.Services.Billing;
 using FlowOps.Services.Replay;
 using FlowOps.Services.Reporting.Customer;
@@ -58,7 +57,6 @@ builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStor
 builder.Services.AddSingleton<ITimeProvider, SystemTimeProvider>();
 
 builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
-builder.Services.AddSingleton<IReportingStore, InMemoryReportingStore>();
 
 builder.Services.AddSingleton<RabbitMqEventBus>();
 builder.Services.AddSingleton<IEventBus>(sp =>
@@ -120,10 +118,28 @@ var app = builder.Build();
 
 app.Logger.LogInformation("FLOWOPS_ROLE={Role}", role);
 
+using var scope = app.Services.CreateScope();
+var db = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+
+Console.WriteLine(db.Database.GetDbConnection().ConnectionString);
+
+var applied = await db.Database.GetAppliedMigrationsAsync();
+var pending = await db.Database.GetPendingMigrationsAsync();
+
+Console.WriteLine("Applied: " + string.Join(", ", applied));
+Console.WriteLine("Pending: " + string.Join(", ", pending));
+
+Console.WriteLine("Known migrations: " + string.Join(", ", db.Database.GetMigrations()));
+Console.WriteLine("Applied migrations: " + string.Join(", ", await db.Database.GetAppliedMigrationsAsync()));
+Console.WriteLine("Pending migrations: " + string.Join(", ", await db.Database.GetPendingMigrationsAsync()));
+
+
+await db.Database.MigrateAsync();
+
 if (isReporting)
 {
-    using var scope = app.Services.CreateScope();
-    var ok = scope.ServiceProvider.GetService<CustomerDirectoryQueries>() is not null;
+    using var scope_queries = app.Services.CreateScope();
+    var ok = scope_queries.ServiceProvider.GetService<CustomerDirectoryQueries>() is not null;
     app.Logger.LogInformation("DI check: CustomerDirectoryQueries registered = {Ok}", ok);
 }
 

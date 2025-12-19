@@ -3,7 +3,6 @@ using FlowOps.Contracts.Item;
 using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
 using FlowOps.Domain.Subscriptions;
-using FlowOps.Reports.Stores;
 
 namespace FlowOps.Application.Subscriptions.Queries
 {

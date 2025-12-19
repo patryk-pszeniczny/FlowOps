@@ -19,7 +19,7 @@ namespace FlowOps.Infrastructure.Persistence.Configurations
             builder.HasOne<Customer>()
                 .WithMany()
                 .HasForeignKey(x => x.CustomerId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
 
             builder.HasOne<Subscription>()
                 .WithMany()

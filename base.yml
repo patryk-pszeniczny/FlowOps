@@ -1,0 +1,1 @@
+ConnectionStrings__FlowOpsDatabase: "Server=162.55.224.22,1433;Database=FlowOpsReporting;User Id=sa;Password=MegaHaslo123;Encrypt=False;TrustServerCertificate=True"

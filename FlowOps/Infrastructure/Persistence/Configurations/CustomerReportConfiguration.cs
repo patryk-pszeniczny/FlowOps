@@ -1,4 +1,5 @@
-﻿using FlowOps.Reports.Models;
+﻿
+using FlowOps.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

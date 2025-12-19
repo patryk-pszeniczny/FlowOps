@@ -1,6 +1,5 @@
 ﻿using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
-using FlowOps.Reports.Stores;
 using FlowOps.Services.Replay;
 using FlowOps.Services.Reporting;
 using Microsoft.AspNetCore.Mvc;
@@ -12,17 +11,14 @@ namespace FlowOps.Controllers
     public class ReplayController : ControllerBase
     {
         private readonly IIntegrationEventStore _eventStore;
-        private readonly IReportingStore _reportingStore;
         private readonly IReportingHandler _reportingHandler;
         private readonly ILogger<ReplayController> _logger;
         public ReplayController(
             IIntegrationEventStore eventStore,
-            IReportingStore reportingStore,
             IReportingHandler reportingHandler,
             ILogger<ReplayController> logger)
         {
             _eventStore = eventStore;
-            _reportingStore = reportingStore;
             _reportingHandler = reportingHandler;
             _logger = logger;
         }

@@ -9,13 +9,13 @@ namespace FlowOps.Services.Reporting
         private readonly ILogger<ReportingHandler> _logger;
         public ReportingHandler(IReportingStore store, ILogger<ReportingHandler> logger)
         {
-            _store = store;
             _logger = logger;
+            _store = store;
         }
         public Task On(SubscriptionActivatedEvent ev, CancellationToken cancellationToken = default)
         {
             var snapshot = _store.UpsertOnActivation(ev.CustomerId);
-            snapshot.ActiveSubscriptionIds.Add(ev.SubscriptionId);
+            //snapshot.ActiveSubscriptions.Add(ev.SubscriptionId);
 
             _logger.LogInformation(
                 "Report updated for CustomerId: {CustomerId}, ActiveSubscriptions: {ActiveSubscriptions}",
@@ -52,7 +52,7 @@ namespace FlowOps.Services.Reporting
                 report.ActiveSubscriptions -= 1;
             }
 
-            report.ActiveSubscriptionIds.Remove(ev.SubscriptionId);
+            //report.ActiveSubscriptionIds.Remove(ev.SubscriptionId);
 
             _logger.LogInformation(
                 "Report cancelled updated for CustomerId: {CustomerId}, ActiveSubscriptions={Active}",
@@ -69,7 +69,7 @@ namespace FlowOps.Services.Reporting
                 report.ActiveSubscriptions -= 1;
             }
 
-            report.ActiveSubscriptionIds.Remove(ev.SubscriptionId);
+           // report.ActiveSubscriptionIds.Remove(ev.SubscriptionId);
 
             _logger.LogInformation(
                 "Report suspended updated for CustomerId: {CustomerId}, ActiveSubscriptions={Active}",
@@ -82,7 +82,7 @@ namespace FlowOps.Services.Reporting
             var report = _store.GetOrAdd(ev.CustomerId);
 
             report.ActiveSubscriptions += 1;
-            report.ActiveSubscriptionIds.Add(ev.SubscriptionId);
+            //report.ActiveSubscriptionIds.Add(ev.SubscriptionId);
 
             _logger.LogInformation(
                 "Report resumed updated for CustomerId: {CustomerId}, ActiveSubscriptions={Active}",
