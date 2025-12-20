@@ -9,7 +9,6 @@ namespace FlowOps.Application.Subscriptions.Commands
     public sealed class CreateSubscriptionCommandHandler
     {
         private readonly ISubscriptionRepository _repository;
-        private readonly IEventBus _eventBus;
         private readonly IPlanPricing _pricing;
         private readonly ITimeProvider _clock;
         private readonly IUnitOfWork _unitOfWork;
@@ -17,14 +16,12 @@ namespace FlowOps.Application.Subscriptions.Commands
 
         public CreateSubscriptionCommandHandler(
             ISubscriptionRepository repository,
-            IEventBus eventBus,
             IPlanPricing pricing,
             ITimeProvider clock,
             IUnitOfWork unitOfWork,
             ILogger<CreateSubscriptionCommandHandler> logger)
         {
             _repository = repository;
-            _eventBus = eventBus;
             _pricing = pricing;
             _clock = clock;
             _unitOfWork = unitOfWork;
@@ -38,11 +35,8 @@ namespace FlowOps.Application.Subscriptions.Commands
                 command.CustomerId,
                 command.PlanCode);
 
-            var activated = subscription.Activate(_clock.UtcNow);
-
             await _repository.AddAsync(subscription, ct);
             await _unitOfWork.SaveChangesAsync(ct);
-            await _eventBus.PublishAsync(activated);
 
 
             _logger.LogInformation("Subscription {SubscriptionId} created and activated for customer {CustomerId} on plan {PlanCode}.",

@@ -1,6 +1,9 @@
-﻿namespace FlowOps.Domain.Customers
+﻿using FlowOps.Domain.Customers.Events;
+using FlowOps.Domain.Events;
+
+namespace FlowOps.Domain.Customers
 {
-    public sealed class Customer
+    public sealed class Customer : AggregateRoot
     {
         private Customer()
         {
@@ -32,7 +35,14 @@
             var trimmedTaxId = string.IsNullOrWhiteSpace(taxId) ? null : taxId!.Trim();
             var trimmedEmail = string.IsNullOrWhiteSpace(email) ? null : email!.Trim();
 
-            return new Customer(Guid.NewGuid(), trimmedName, trimmedTaxId, trimmedEmail, createdAtUtc);
+            var customer = new Customer(Guid.NewGuid(), trimmedName, trimmedTaxId, trimmedEmail, createdAtUtc);
+            customer.AddDomainEvent(new CustomerCreatedDomainEvent(
+                customer.Id,
+                customer.Name,
+                customer.TaxId,
+                customer.Email,
+                customer.CreatedAt));
+            return customer;
         }
 
         public static Customer FromExisting(Guid id, string name, string? taxId, string? email, DateTime createdAtUtc)

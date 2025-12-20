@@ -9,7 +9,6 @@ namespace FlowOps.Application.Customers.Commands
     public sealed class CreateCustomerCommandHandler
     {
         private readonly ICustomerRepository _repository;
-        private readonly IEventBus _eventBus;
         private readonly ITimeProvider _clock;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<CreateCustomerCommandHandler> _logger;
@@ -21,7 +20,6 @@ namespace FlowOps.Application.Customers.Commands
             ILogger<CreateCustomerCommandHandler> logger)
         {
             _repository = repository;
-            _eventBus = eventBus;
             _clock = clock;
             _unitOfWork = unitOfWork;
             _logger = logger;
@@ -48,19 +46,8 @@ namespace FlowOps.Application.Customers.Commands
             await _repository.AddAsync(customer, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var @event = new CustomerCreatedEvent
-            {
-                CustomerId = customer.Id,
-                Name = customer.Name,
-                TaxId = customer.TaxId,
-                Email = customer.Email,
-                CreatedAt = customer.CreatedAt
-            };
-
-            await _eventBus.PublishAsync(@event);
-
             _logger.LogInformation(
-                "Created customer CustomerId={CustomerId}, Name={Name} and published CustomerCreatedEvent.",
+                "Created customer CustomerId={CustomerId}, Name={Name} and raised domain events.",
                 customer.Id,
                 customer.Name);
 

@@ -9,20 +9,17 @@ namespace FlowOps.Application.Subscriptions.Commands
     public sealed class ResumeSubscriptionCommandHandler
     {
         private readonly ISubscriptionRepository _repository;
-        private readonly IEventBus _eventBus;
         private readonly ITimeProvider _clock;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ResumeSubscriptionCommandHandler> _logger;
 
         public ResumeSubscriptionCommandHandler(
             ISubscriptionRepository repository,
-            IEventBus eventBus,
             ITimeProvider clock,
             IUnitOfWork unitOfWork,
             ILogger<ResumeSubscriptionCommandHandler> logger)
         {
             _repository = repository;
-            _eventBus = eventBus;
             _clock = clock;
             _unitOfWork = unitOfWork;
             _logger = logger;
@@ -36,12 +33,6 @@ namespace FlowOps.Application.Subscriptions.Commands
 
             await _unitOfWork.SaveChangesAsync(ct);
 
-            await _eventBus.PublishAsync(new SubscriptionResumedEvent
-            {
-                SubscriptionId = subscription.Id,
-                CustomerId = subscription.CustomerId,
-                PlanCode = subscription.PlanCode
-            });
             _logger.LogInformation("Subscription {SubscriptionId} resumed.", command.SubscriptionId);
         }
     }
