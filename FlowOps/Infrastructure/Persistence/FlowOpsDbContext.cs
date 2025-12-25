@@ -27,6 +27,9 @@ namespace FlowOps.Infrastructure.Persistence
         public DbSet<CustomerReport> CustomerReports => Set<CustomerReport>();
         public DbSet<ActiveSubscription> ActiveSubscriptions => Set<ActiveSubscription>();
         public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+        public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
+        public DbSet<UserListCacheEntry> UserListCaches => Set<UserListCacheEntry>();
+        public DbSet<SubscriptionDraft> SubscriptionDrafts => Set<SubscriptionDraft>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

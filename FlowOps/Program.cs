@@ -6,6 +6,7 @@ using FlowOps.Application.Reporting;
 using FlowOps.Application.Subscriptions.Commands;
 using FlowOps.Application.Subscriptions.Events;
 using FlowOps.Application.Subscriptions.Queries;
+using FlowOps.Application.UserData;
 using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Customers;
@@ -22,6 +23,7 @@ using FlowOps.Infrastructure.Persistence.Inbox;
 using FlowOps.Infrastructure.Persistence.Outbox;
 using FlowOps.Infrastructure.Persistence.Reporting;
 using FlowOps.Infrastructure.Persistence.Repositories;
+using FlowOps.Infrastructure.Persistence.UserData;
 using FlowOps.Middleware;
 using FlowOps.Pricing;
 using FlowOps.Services.Billing;
@@ -68,7 +70,14 @@ builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStor
 
 builder.Services.AddSingleton<ITimeProvider, SystemTimeProvider>();
 
+builder.Services.Configure<LegacyLocalStorageOptions>(builder.Configuration.GetSection("LegacyLocalStorage"));
+
 builder.Services.AddSingleton<IPlanPricing, InMemoryPlanPricing>();
+
+builder.Services.AddSingleton<ILegacyLocalStorageReader, FileLegacyLocalStorageReader>();
+builder.Services.AddScoped<IUserStateRepository, EfUserStateRepository>();
+builder.Services.AddScoped<UserStateService>();
+builder.Services.AddScoped<UserStateInitializer>();
 
 builder.Services.AddSingleton<RabbitMqEventBus>();
 builder.Services.AddSingleton<IEventBus>(sp =>
@@ -142,6 +151,9 @@ using var scope = app.Services.CreateScope();
 var db = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
 
 await db.Database.MigrateAsync();
+
+var userStateInitializer = scope.ServiceProvider.GetRequiredService<UserStateInitializer>();
+await userStateInitializer.InitializeAsync();
 
 if (isReporting)
 {
