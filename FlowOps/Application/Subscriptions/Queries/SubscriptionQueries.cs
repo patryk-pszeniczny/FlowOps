@@ -1,4 +1,5 @@
-﻿using FlowOps.Application.Reporting;
+﻿using AutoMapper;
+using FlowOps.Application.Reporting;
 using FlowOps.Contracts.Item;
 using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
@@ -10,35 +11,28 @@ namespace FlowOps.Application.Subscriptions.Queries
     {
         private readonly ISubscriptionRepository _repository;
         private readonly IReportingQueries _reportingQueries;
+        private readonly IMapper _mapper;
         public SubscriptionQueries(
             ISubscriptionRepository repository,
-            IReportingQueries reportingQueries)
+            IReportingQueries reportingQueries,
+            IMapper mapper)
         {
             _repository = repository;
             _reportingQueries = reportingQueries;
+            _mapper = mapper;
         }
         public async Task<SubscriptionDetailsResponse> GetDetailsAsync(Guid id, CancellationToken ct = default)
         {
             var subscription = await _repository.GetByIdAsync(id, asNoTracking: true, ct: ct)
                 ?? throw new KeyNotFoundException($"Subscription with ID '{id}' not found.");
 
-            return new SubscriptionDetailsResponse(
-                id: subscription.Id,
-                CustomerId: subscription.CustomerId,
-                PlanCode: subscription.PlanCode,
-                Status: subscription.Status.ToString()
-            );
+            return _mapper.Map<SubscriptionDetailsResponse>(subscription);
         }
         public async Task<IReadOnlyList<SubscriptionListItem>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default)
         {
             var subscriptions = await _repository.GetByCustomerAsync(customerId, ct);
-            return subscriptions
-                .Select(s => new SubscriptionListItem(
-                    s.Id,
-                    s.PlanCode,
-                    s.Status.ToString()))
-                .OrderBy(x => x.PlanCode)
-                .ToList();
+            var ordered = subscriptions.OrderBy(s => s.PlanCode);
+            return _mapper.Map<IReadOnlyList<SubscriptionListItem>>(ordered);
         }
         public Task<IReadOnlyList<SubscriptionSqlResponse>> GetByCustomerAsync(Guid customerId, string? status, CancellationToken ct = default) =>
             _reportingQueries.GetByCustomerAsync(customerId, status, ct);

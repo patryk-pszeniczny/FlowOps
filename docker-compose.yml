@@ -21,6 +21,7 @@ services:
       RabbitMQ__UserName: "${RabbitMQ__UserName}"
       RabbitMQ__Password: "${RabbitMQ__Password}"
       RabbitMQ__VirtualHost: "${RabbitMQ__VirtualHost}"
+      Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: None
   billing:
      image: "flowops:dev"
      container_name: flowops-billing

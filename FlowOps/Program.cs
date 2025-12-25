@@ -1,6 +1,7 @@
 using FlowOps.Application.Common;
 using FlowOps.Application.Customers.Commands;
 using FlowOps.Application.Customers.Queries;
+using FlowOps.Application.Mapping;
 using FlowOps.Application.Reporting;
 using FlowOps.Application.Subscriptions.Commands;
 using FlowOps.Application.Subscriptions.Events;
@@ -28,6 +29,7 @@ using FlowOps.Services.Replay;
 using FlowOps.Services.Reporting.Customer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,16 +40,15 @@ var isReporting = role == "reporting";
 var isApi = !isBilling && !isReporting;
 var exposesHttpApi = isApi || isReporting;
 
+builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
+
+
 builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
 
 builder.Services.AddDbContext<FlowOpsDbContext>(options =>
 {
-    var connectionString =
-        builder.Configuration.GetConnectionString("FlowOpsDatabase")
-        ?? builder.Configuration["ConnectionStrings:FlowOpsDatabase"]
-        ?? builder.Configuration["ConnectionStrings__FlowOpsDatabase"]
-        ?? throw new InvalidOperationException(
-            "Missing connection string 'FlowOpsDatabase'. Set it via appsettings or env: ConnectionStrings__FlowOpsDatabase.");
+    var connectionString = builder.Configuration.GetConnectionString("FlowOpsDatabase")
+       ?? throw new InvalidOperationException("Missing connection string 'FlowOpsDatabase'. Configure it in appsettings or env ConnectionStrings__FlowOpsDatabase.");
 
     options.UseSqlServer(connectionString);
 });

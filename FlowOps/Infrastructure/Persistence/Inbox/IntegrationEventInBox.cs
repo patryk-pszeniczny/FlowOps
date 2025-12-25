@@ -1,5 +1,4 @@
-﻿using FlowOps.Application.Common;
-using FlowOps.BuildingBlocks.Integration;
+﻿using FlowOps.BuildingBlocks.Integration;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlowOps.Infrastructure.Persistence.Inbox

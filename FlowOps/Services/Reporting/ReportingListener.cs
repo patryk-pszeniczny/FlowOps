@@ -1,6 +1,4 @@
-﻿
-using FlowOps.Application.Common;
-using FlowOps.BuildingBlocks.Integration;
+﻿using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
 
