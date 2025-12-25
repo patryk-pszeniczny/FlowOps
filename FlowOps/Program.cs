@@ -40,7 +40,10 @@ var isReporting = role == "reporting";
 var isApi = !isBilling && !isReporting;
 var exposesHttpApi = isApi || isReporting;
 
-builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
+builder.Services.AddAutoMapper(cfg => {
+    cfg.AddProfile<MappingProfile>();
+    cfg.LicenseKey = builder.Configuration["AutoMapperLicenseKey"];
+});
 
 
 builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
@@ -137,19 +140,6 @@ app.Logger.LogInformation("FLOWOPS_ROLE={Role}", role);
 
 using var scope = app.Services.CreateScope();
 var db = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
-
-Console.WriteLine(db.Database.GetDbConnection().ConnectionString);
-
-var applied = await db.Database.GetAppliedMigrationsAsync();
-var pending = await db.Database.GetPendingMigrationsAsync();
-
-Console.WriteLine("Applied: " + string.Join(", ", applied));
-Console.WriteLine("Pending: " + string.Join(", ", pending));
-
-Console.WriteLine("Known migrations: " + string.Join(", ", db.Database.GetMigrations()));
-Console.WriteLine("Applied migrations: " + string.Join(", ", await db.Database.GetAppliedMigrationsAsync()));
-Console.WriteLine("Pending migrations: " + string.Join(", ", await db.Database.GetPendingMigrationsAsync()));
-
 
 await db.Database.MigrateAsync();
 
