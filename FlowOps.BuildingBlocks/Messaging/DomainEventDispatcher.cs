@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace FlowOps.BuildingBlocks.Messaging
 {
-    public sealed class DomainEventDispatcher : IDomainDispatcher
+    public sealed class DomainEventDispatcher : IDomainEventDispatcher
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<DomainEventDispatcher> _logger;
@@ -28,36 +28,27 @@ namespace FlowOps.BuildingBlocks.Messaging
                 .MakeGenericType(typeof(IDomainEventHandler<>)
                 .MakeGenericType(eventType));
             var handlers = _serviceProvider.GetService(handlerType) as IEnumerable<object> ?? Enumerable.Empty<object>();
+
             foreach (var handler in handlers)
             {
                 var method = handler
                     .GetType()
-                    .GetMethod(nameof(IDomainEventHandler<IDomainEvent>.HandleAsync), 
-                        new[] {
-                            eventType,
-                            typeof(CancellationToken)
-                        });
-                if(method is null)
+                    .GetMethod(nameof(IDomainEventHandler<IDomainEvent>.HandleAsync), [eventType, typeof(CancellationToken)]);
+
+                if (method is null)
                 {
                     continue;
                 }
+
                 try
                 {
-                    _logger.LogDebug("Dispatching doamin event {EventType} to handler {HandlerType}.",
-                        eventType.FullName,
-                        handler.GetType().FullName);
-                    var task = (Task)method.Invoke(handler, 
-                        new object[] { 
-                            domainEvent, 
-                            cancellationToken 
-                        })!;
+                    _logger.LogDebug("Dispatching domain event {EventType} to handler {HandlerType}.", eventType.FullName, handler.GetType().FullName);
+                    var task = (Task)method.Invoke(handler, [domainEvent, cancellationToken])!;
                     await task.ConfigureAwait(false);
                 }
-                catch(TargetInvocationException ex) when (ex.InnerException is not null)
+                catch (TargetInvocationException ex) when (ex.InnerException is not null)
                 {
-                    _logger.LogError(ex.InnerException, "Domain event handler {HandlerType} threw an exception for event {EventType}.", 
-                         handler.GetType().FullName, 
-                         eventType.FullName);
+                    _logger.LogError(ex.InnerException, "Domain event handler {HandlerType} threw an exception for event {EventType}.", handler.GetType().FullName, eventType.FullName);
                     throw ex.InnerException;
                 }
             }

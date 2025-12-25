@@ -8,6 +8,10 @@ namespace FlowOps.Domain.Events
         {
             OccurredOn = DateTime.UtcNow;
         }
+        protected DomainEventBase(DateTime occurredOn)
+        {
+            OccurredOn = occurredOn;
+        }
         public DateTime OccurredOn { get; }
     }
 }

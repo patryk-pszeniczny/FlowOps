@@ -1,8 +1,10 @@
-﻿using FlowOps.Events;
+﻿using FlowOps.Domain.Events;
+using FlowOps.Domain.Subscriptions.Events;
+using FlowOps.Events;
 
 namespace FlowOps.Domain.Subscriptions
 {
-    public sealed class Subscription
+    public sealed class Subscription : AggregateRoot
     {
         public Guid Id { get; private set; }
         public Guid CustomerId { get; private set; }
@@ -15,7 +17,7 @@ namespace FlowOps.Domain.Subscriptions
         public DateTime? SuspendedAt { get; private set; }
         public DateTime? ResumedAt { get; private set; }
 
-        private Subscription() { } //For serializer
+        private Subscription() { }
 
         public Subscription(Guid id, Guid customerId, string planCode)
         {
@@ -32,7 +34,7 @@ namespace FlowOps.Domain.Subscriptions
                 throw new ArgumentException("PlanCode cannot be null or whitespace.", nameof(planCode));
             return new Subscription(Guid.NewGuid(), customerId, planCode.Trim().ToUpperInvariant());
         }
-        public SubscriptionActivatedEvent Activate(DateTime utcNow)
+        public void Activate(DateTime utcNow)
         {
             if(Status == SubscriptionStatus.Active)
                 throw new InvalidOperationException("Subscription is already active.");
@@ -47,12 +49,7 @@ namespace FlowOps.Domain.Subscriptions
             CancelledAt = null;
             ExpiresAt = utcNow.AddMonths(1);
 
-            return new SubscriptionActivatedEvent
-            {
-                SubscriptionId = Id,
-                CustomerId = CustomerId,
-                PlanCode = PlanCode
-            };
+            AddDomainEvent(new SubscriptionActivatedDomainEvent(Id, CustomerId, PlanCode));
         }
         public void Cancel(DateTime utcNow)
         {
@@ -61,6 +58,8 @@ namespace FlowOps.Domain.Subscriptions
 
             Status = SubscriptionStatus.Cancelled;
             CancelledAt = utcNow;
+
+            AddDomainEvent(new SubscriptionCancelledDomainEvent(Id, CustomerId, PlanCode));
         }
         public void Expire(DateTime utcNow)
         {
@@ -81,6 +80,8 @@ namespace FlowOps.Domain.Subscriptions
                 throw new InvalidOperationException("Only active subscriptions can be suspended.");
             Status = SubscriptionStatus.Suspended;
             SuspendedAt = utcNow;
+
+            AddDomainEvent(new SubscriptionSuspendedDomainEvent(Id, CustomerId, PlanCode));
         }
         public void Resume(DateTime utcNow)
         {
@@ -89,6 +90,8 @@ namespace FlowOps.Domain.Subscriptions
             Status = SubscriptionStatus.Active;
             ResumedAt = utcNow;
             SuspendedAt = null;
+
+            AddDomainEvent(new SubscriptionResumedDomainEvent(Id, CustomerId, PlanCode));
         }
 
     }

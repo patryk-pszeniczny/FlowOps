@@ -1,4 +1,4 @@
-﻿namespace FlowOps.Infrastructure.Persistence.Entities
+﻿namespace FlowOps.Infrastructure.Persistence.Inbox
 {
     public sealed class InboxMessage
     {

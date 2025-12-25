@@ -1,4 +1,4 @@
-﻿using FlowOps.Infrastructure.Persistence.Entities;
+﻿using FlowOps.Infrastructure.Persistence.Inbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

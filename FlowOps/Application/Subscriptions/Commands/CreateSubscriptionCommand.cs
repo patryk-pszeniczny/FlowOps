@@ -35,6 +35,8 @@ namespace FlowOps.Application.Subscriptions.Commands
                 command.CustomerId,
                 command.PlanCode);
 
+            subscription.Activate(_clock.UtcNow);
+
             await _repository.AddAsync(subscription, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 

@@ -2,7 +2,7 @@
 
 namespace FlowOps.Application.Common
 {
-    public interface IIntegrationEventInBox
+    public interface IIntegrationEventInbox
     {
         Task<bool> HasProcessedAsync(string consumer, Guid eventId, CancellationToken cancellationToken = default);
         Task MarkProcessedAsync(string consumer, Guid eventId, CancellationToken cancellationToken = default);

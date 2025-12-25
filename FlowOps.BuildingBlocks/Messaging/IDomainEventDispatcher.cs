@@ -2,7 +2,7 @@
 
 namespace FlowOps.BuildingBlocks.Messaging
 {
-    public interface IDomainDispatcher
+    public interface IDomainEventDispatcher
     {
         Task DispatchAsync(IEnumerable<IDomainEvent> domainEvents, CancellationToken cancellationToken = default);
     }

@@ -1,4 +1,5 @@
-﻿using FlowOps.BuildingBlocks.Integration;
+﻿using FlowOps.Application.Common;
+using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
 
@@ -9,7 +10,7 @@ namespace FlowOps.Services.Reporting.Customer
         private readonly IEventBus _bus;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<CustomerDirectoryListener> _logger;
-
+        private const string ConsumerName = "CustomerDirectory";
         public CustomerDirectoryListener(
             IEventBus bus,
             IServiceScopeFactory scopeFactory,
@@ -38,10 +39,10 @@ namespace FlowOps.Services.Reporting.Customer
 
             using var scope = _scopeFactory.CreateScope();
             var handler = scope.ServiceProvider.GetRequiredService<IIntegrationEventHandler<CustomerCreatedEvent>>();
-
+            var inbox = scope.ServiceProvider.GetRequiredService<IIntegrationEventInbox>();
             try
             {
-                await handler.HandleAsync(evt, ct).ConfigureAwait(false);
+                await inbox.ProcessAsync(ConsumerName, evt, token => handler.HandleAsync(evt, token),ct).ConfigureAwait(false);
 
                 _logger.LogInformation(
                     "CustomerDirectoryListener handled CustomerCreatedEvent (EventId={EventId}, CustomerId={CustomerId}).",

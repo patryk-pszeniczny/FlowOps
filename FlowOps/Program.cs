@@ -3,18 +3,21 @@ using FlowOps.Application.Customers.Commands;
 using FlowOps.Application.Customers.Queries;
 using FlowOps.Application.Reporting;
 using FlowOps.Application.Subscriptions.Commands;
+using FlowOps.Application.Subscriptions.Events;
 using FlowOps.Application.Subscriptions.Queries;
 using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Domain.Customers;
 using FlowOps.Domain.Plans;
 using FlowOps.Domain.Subscriptions;
+using FlowOps.Domain.Subscriptions.Events;
 using FlowOps.Events;
 using FlowOps.Infrastructure.Common;
 using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Persistence;
+using FlowOps.Infrastructure.Persistence.Outbox;
 using FlowOps.Infrastructure.Persistence.Reporting;
 using FlowOps.Infrastructure.Persistence.Repositories;
 using FlowOps.Middleware;
@@ -51,6 +54,10 @@ builder.Services.AddDbContext<FlowOpsDbContext>(options =>
 builder.Services.AddScoped<IIdempotencyStore, EfCoreIdempotencyStore>();
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 builder.Services.AddScoped<CustomerDirectoryQueries>();
+
+builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+builder.Services.AddScoped<IOutboxMessageWriter, OutboxMessageWriter>();
+builder.Services.AddScoped<IIntegrationEventInbox, IIntegrationEventInbox>();
 
 builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStore>();
 
@@ -103,6 +110,12 @@ if (isApi)
     builder.Services.AddScoped<CancelSubscriptionCommandHandler>();
     builder.Services.AddScoped<SuspendSubscriptionCommandHandler>();
     builder.Services.AddScoped<ResumeSubscriptionCommandHandler>();
+
+    builder.Services.AddScoped<IDomainEventHandler<SubscriptionActivatedDomainEvent>, SubscriptionActivatedDomainEventHandler>();
+    builder.Services.AddScoped<IDomainEventHandler<SubscriptionCancelledDomainEvent>, SubscriptionCancelledDomainEventHandler>();
+    builder.Services.AddScoped<IDomainEventHandler<SubscriptionSuspendedDomainEvent>, SubscriptionSuspendedDomainEventHandler>();
+    builder.Services.AddScoped<IDomainEventHandler<SubscriptionResumedDomainEvent>, SubscriptionResumedDomainEventHandler>();
+
     builder.Services.AddScoped<SubscriptionQueries>();
 
     builder.Services.AddScoped<ICustomerRepository, EfCustomerRepository>();
@@ -111,6 +124,8 @@ if (isApi)
 
     builder.Services.AddScoped<IReportingQueries, EfReportingQueries>();
     builder.Services.AddHostedService<EfReportingProjector>();
+
+    builder.Services.AddHostedService<OutboxMessageProcessor>();
 
 }
 

@@ -208,7 +208,36 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
 
                     b.ToTable("IntegrationEvents", (string)null);
                 });
+            modelBuilder.Entity("FlowOps.Infrastructure.Persistence.Outbox.OutboxMessage", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uniqueidentifier");
 
+                b.Property<string>("Error")
+                    .HasMaxLength(2000)
+                    .HasColumnType("nvarchar(2000)");
+
+                b.Property<DateTime>("OccurredOn")
+                    .HasColumnType("datetime2");
+
+                b.Property<string>("Payload")
+                    .IsRequired()
+                    .HasColumnType("nvarchar(max)");
+
+                b.Property<DateTime?>("ProcessedAt")
+                    .HasColumnType("datetime2");
+
+                b.Property<string>("Type")
+                    .IsRequired()
+                    .HasMaxLength(500)
+                    .HasColumnType("nvarchar(500)");
+
+                b.HasKey("Id");
+
+                b.HasIndex("ProcessedAt");
+
+                b.ToTable("OutboxMessages", (string)null);
+            });
             modelBuilder.Entity("FlowOps.Domain.Subscriptions.Subscription", b =>
                 {
                     b.HasOne("FlowOps.Domain.Customers.Customer", null)

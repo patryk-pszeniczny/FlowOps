@@ -1,4 +1,6 @@
 ﻿
+using FlowOps.Application.Common;
+using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using FlowOps.Events;
 
@@ -9,6 +11,7 @@ namespace FlowOps.Services.Reporting
         private readonly IEventBus _eventBus;
         private readonly ILogger<ReportingListener> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly string ConsumerName = "Reporting";
         public ReportingListener(
             IEventBus eventBus, 
             ILogger<ReportingListener> logger,
@@ -36,18 +39,18 @@ namespace FlowOps.Services.Reporting
             _logger.LogInformation("ReportingListener stopping");
             return Task.CompletedTask;
         }
-        private Task HandleActivation(SubscriptionActivatedEvent ev) => WithHandler(h => h.On(ev));
-        private Task HandleInvoice(InvoiceIssuedEvent ev) => WithHandler(h => h.On(ev));
-        private Task HandlePaid(InvoicePaidEvent ev) => WithHandler(h => h.On(ev));
-        private Task HandleCancelled(SubscriptionCancelledEvent ev) => WithHandler(h => h.On(ev));
-        private Task HandleResumed(SubscriptionResumedEvent ev) => WithHandler(h => h.On(ev));
-        private Task HandleSuspended(SubscriptionSuspendedEvent ev) => WithHandler(h => h.On(ev));
-
-        private async Task WithHandler(Func<IReportingHandler, Task> action)
+        private Task HandleActivation(SubscriptionActivatedEvent ev) => WithHandler(ev, (h, token) => h.On(ev));
+        private Task HandleInvoice(InvoiceIssuedEvent ev) => WithHandler(ev, (h, token) => h.On(ev));
+        private Task HandlePaid(InvoicePaidEvent ev) => WithHandler(ev, (h, token) => h.On(ev));
+        private Task HandleCancelled(SubscriptionCancelledEvent ev) => WithHandler(ev, (h, token) => h.On(ev));
+        private Task HandleResumed(SubscriptionResumedEvent ev) => WithHandler(ev, (h, token) => h.On(ev));
+        private Task HandleSuspended(SubscriptionSuspendedEvent ev) => WithHandler(ev, (h, token) => h.On(ev));
+        private async Task WithHandler(IntegrationEvent ev, Func<IReportingHandler, CancellationToken, Task> action)
         {
             using var scope = _scopeFactory.CreateScope();
             var handler = scope.ServiceProvider.GetRequiredService<IReportingHandler>();
-            await action(handler);
+            var inbox = scope.ServiceProvider.GetRequiredService<IIntegrationEventInbox>();
+            await inbox.ProcessAsync(ConsumerName, ev, token => action(handler, token), CancellationToken.None).ConfigureAwait(false);
         }
     }
 }
