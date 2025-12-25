@@ -1,12 +1,11 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace FlowOps.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class AddOutboxMessages : Migration
+    public partial class CreateOutboxMessagesTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -37,7 +36,7 @@ namespace FlowOps.Infrastructure.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "OutboxMessages");
+               name: "OutboxMessages");
         }
     }
 }

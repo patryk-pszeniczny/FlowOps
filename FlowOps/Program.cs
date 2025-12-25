@@ -17,6 +17,7 @@ using FlowOps.Infrastructure.Health;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Infrastructure.Messaging;
 using FlowOps.Infrastructure.Persistence;
+using FlowOps.Infrastructure.Persistence.Inbox;
 using FlowOps.Infrastructure.Persistence.Outbox;
 using FlowOps.Infrastructure.Persistence.Reporting;
 using FlowOps.Infrastructure.Persistence.Repositories;
@@ -57,7 +58,7 @@ builder.Services.AddScoped<CustomerDirectoryQueries>();
 
 builder.Services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
 builder.Services.AddScoped<IOutboxMessageWriter, OutboxMessageWriter>();
-builder.Services.AddScoped<IIntegrationEventInbox, IIntegrationEventInbox>();
+builder.Services.AddScoped<IIntegrationEventInbox, IntegrationEventInBox>();
 
 builder.Services.AddSingleton<IIntegrationEventStore, EfCoreIntegrationEventStore>();
 
