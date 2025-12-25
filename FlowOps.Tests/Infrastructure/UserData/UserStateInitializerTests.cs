@@ -20,7 +20,7 @@ public class UserStateInitializerTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
-        return new FlowOpsDbContext(options, new NoOpDispatcher());
+        return new FlowOpsDbContext(options, new NoOpDispatcher(), NullLogger<FlowOpsDbContext>.Instance);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
-﻿using FlowOps.BuildingBlocks.Domain.Events;
+﻿using FlowOps.BuildingBlocks.Diagnostics;
+using FlowOps.BuildingBlocks.Domain.Events;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 
@@ -43,12 +44,21 @@ namespace FlowOps.BuildingBlocks.Messaging
                 try
                 {
                     _logger.LogDebug("Dispatching domain event {EventType} to handler {HandlerType}.", eventType.FullName, handler.GetType().FullName);
+                    var startedAt = DateTime.UtcNow;
                     var task = (Task)method.Invoke(handler, [domainEvent, cancellationToken])!;
                     await task.ConfigureAwait(false);
+
+                    FlowOpsMetrics.DomainEventsHandled.Add(1, KeyValuePair.Create<string, object?>("event", eventType.Name));
+                    _logger.LogInformation(
+                        "Handled domain event {EventType} with handler {HandlerType} in {DurationMs} ms.",
+                        eventType.FullName,
+                        handler.GetType().FullName,
+                        (DateTime.UtcNow - startedAt).TotalMilliseconds);
                 }
                 catch (TargetInvocationException ex) when (ex.InnerException is not null)
                 {
                     _logger.LogError(ex.InnerException, "Domain event handler {HandlerType} threw an exception for event {EventType}.", handler.GetType().FullName, eventType.FullName);
+                    FlowOpsMetrics.DomainEventHandlerFailures.Add(1, KeyValuePair.Create<string, object?>("event", eventType.Name));
                     throw ex.InnerException;
                 }
             }

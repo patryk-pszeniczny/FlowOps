@@ -1,4 +1,5 @@
 ﻿using FlowOps.Application.Common;
+using FlowOps.BuildingBlocks.Diagnostics;
 using FlowOps.BuildingBlocks.Integration;
 using FlowOps.Infrastructure.Persistence;
 using System.Text.Json;
@@ -42,6 +43,8 @@ namespace FlowOps.Infrastructure.Persistence.Outbox
                 "Stored integration event {EventType} with Id={EventId} in outbox.",
                 typeName,
                 integrationEvent.Id);
+
+            FlowOpsMetrics.OutboxMessagesProcessed.Add(1, KeyValuePair.Create<string, object?>("event", integrationEvent.GetType().Name));
 
             return Task.CompletedTask;
         }

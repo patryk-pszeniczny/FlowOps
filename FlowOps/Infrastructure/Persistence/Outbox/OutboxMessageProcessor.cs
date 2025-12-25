@@ -1,4 +1,5 @@
-﻿using FlowOps.BuildingBlocks.Integration;
+﻿using FlowOps.BuildingBlocks.Diagnostics;
+using FlowOps.BuildingBlocks.Integration;
 using FlowOps.BuildingBlocks.Messaging;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -56,6 +57,7 @@ namespace FlowOps.Infrastructure.Persistence.Outbox
             {
                 return;
             }
+            var publishedCount = 0;
 
             foreach (var message in messages)
             {
@@ -81,6 +83,7 @@ namespace FlowOps.Infrastructure.Persistence.Outbox
 
                     message.ProcessedAt = DateTime.UtcNow;
                     message.Error = null;
+                    publishedCount++;
 
                     _logger.LogInformation(
                         "Published outbox message {MessageId} for event {EventType}.",
@@ -91,11 +94,17 @@ namespace FlowOps.Infrastructure.Persistence.Outbox
                 {
                     message.Error = ex.ToString();
                     message.ProcessedAt = DateTime.UtcNow;
+                    FlowOpsMetrics.OutboxMessagesFailed.Add(1, KeyValuePair.Create<string, object?>("event", message.Type));
                     _logger.LogError(ex, "Failed to publish outbox message {MessageId}.", message.Id);
                 }
             }
 
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            if (publishedCount > 0)
+            {
+                FlowOpsMetrics.OutboxMessagesProcessed.Add(publishedCount);
+                _logger.LogInformation("Processed {Count} outbox messages in this batch.", publishedCount);
+            }
         }
     }
 }

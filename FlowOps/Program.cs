@@ -48,7 +48,11 @@ builder.Services.AddAutoMapper(cfg => {
 });
 
 
-builder.Services.AddHealthChecks().AddCheck<SqlHealthCheck>("sql-db");
+builder.Services
+    .AddHealthChecks()
+    .AddCheck<SqlHealthCheck>("sql-db")
+    .AddCheck<OutboxHealthCheck>("outbox")
+    .AddCheck<InboxHealthCheck>("inbox");
 
 builder.Services.AddDbContext<FlowOpsDbContext>(options =>
 {

@@ -1,4 +1,5 @@
-﻿using FlowOps.BuildingBlocks.Integration;
+﻿using FlowOps.BuildingBlocks.Diagnostics;
+using FlowOps.BuildingBlocks.Integration;
 using Microsoft.EntityFrameworkCore;
 
 namespace FlowOps.Infrastructure.Persistence.Inbox
@@ -29,6 +30,8 @@ namespace FlowOps.Infrastructure.Persistence.Inbox
                 ProcessedAt = DateTime.UtcNow
             });
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            FlowOpsMetrics.InboxMessagesProcessed.Add(1, KeyValuePair.Create<string, object?>("consumer", consumer));
+            _logger.LogInformation("Inbox marked event {EventId} as processed for consumer {Consumer}.", eventId, consumer);
         }
 
         public async Task ProcessAsync<TEvent>(string conusmer, TEvent evt, Func<CancellationToken, Task> handler, CancellationToken cancellationToken = default) where TEvent : IntegrationEvent
