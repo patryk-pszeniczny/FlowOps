@@ -52,5 +52,126 @@ namespace FlowOps.Controllers.Reporting
             };
             return Ok(summary);
         }
+
+        [HttpGet("subscriptions/status")]
+        public ActionResult<object> GetSubscriptionStatusSummary()
+        {
+            var statusBySubscription = new Dictionary<Guid, (string Status, string Plan)>();
+
+            foreach (var ev in _recorder.Snapshot().OrderBy(e => e.OccurredOn).ThenBy(e => e.Version))
+            {
+                switch (ev)
+                {
+                    case SubscriptionActivatedEvent activated:
+                        statusBySubscription[activated.SubscriptionId] = ("Active", activated.PlanCode);
+                        break;
+                    case SubscriptionSuspendedEvent suspended:
+                        statusBySubscription[suspended.SubscriptionId] = ("Suspended", suspended.PlanCode);
+                        break;
+                    case SubscriptionResumedEvent resumed:
+                        statusBySubscription[resumed.SubscriptionId] = ("Active", resumed.PlanCode);
+                        break;
+                    case SubscriptionCancelledEvent cancelled:
+                        statusBySubscription[cancelled.SubscriptionId] = ("Cancelled", cancelled.PlanCode);
+                        break;
+                }
+            }
+
+            var byStatus = statusBySubscription
+                .GroupBy(kv => kv.Value.Status)
+                .Select(g => new
+                {
+                    status = g.Key,
+                    count = g.Count()
+                })
+                .OrderByDescending(x => x.count)
+                .ToArray();
+
+            var byPlan = statusBySubscription
+                .GroupBy(kv => kv.Value.Plan)
+                .Select(g => new
+                {
+                    planCode = g.Key,
+                    active = g.Count(x => x.Value.Status == "Active"),
+                    suspended = g.Count(x => x.Value.Status == "Suspended"),
+                    cancelled = g.Count(x => x.Value.Status == "Cancelled"),
+                    total = g.Count(),
+                })
+                .OrderByDescending(x => x.total)
+                .ToArray();
+
+            return Ok(new
+            {
+                total = statusBySubscription.Count,
+                byStatus,
+                byPlan
+            });
+        }
+
+        [HttpGet("subscriptions/velocity")]
+        public ActionResult<IEnumerable<object>> GetSubscriptionVelocity([FromQuery] int days = 30)
+        {
+            var window = Math.Clamp(days, 1, 365);
+            var since = DateTime.UtcNow.Date.AddDays(-window);
+
+            var events = _recorder
+                .Snapshot()
+                .Where(ev => ev.OccurredOn.Date >= since)
+                .GroupBy(ev => ev.OccurredOn.Date)
+                .Select(g => new
+                {
+                    date = g.Key,
+                    activated = g.Count(e => e is SubscriptionActivatedEvent),
+                    suspended = g.Count(e => e is SubscriptionSuspendedEvent),
+                    resumed = g.Count(e => e is SubscriptionResumedEvent),
+                    cancelled = g.Count(e => e is SubscriptionCancelledEvent)
+                })
+                .OrderBy(g => g.date)
+                .ToArray();
+
+            return Ok(events);
+        }
+
+        [HttpGet("billing/trends")]
+        public ActionResult<IEnumerable<object>> GetBillingTrends([FromQuery] int months = 6)
+        {
+            var window = Math.Clamp(months, 1, 24);
+            var since = DateTime.UtcNow.AddMonths(-window);
+
+            var issued = _recorder.Snapshot().OfType<InvoiceIssuedEvent>().Where(i => i.OccurredOn >= since).ToList();
+            var paid = _recorder.Snapshot().OfType<InvoicePaidEvent>().Where(i => i.OccurredOn >= since).ToList();
+
+            var issuedByMonth = issued
+                .GroupBy(i => new { i.OccurredOn.Year, i.OccurredOn.Month })
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.Amount));
+
+            var paidByMonth = paid
+                .GroupBy(i => new { i.OccurredOn.Year, i.OccurredOn.Month })
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.Amount));
+
+            var monthsRange = Enumerable
+                .Range(0, window)
+                .Select(offset => DateTime.UtcNow.AddMonths(-offset))
+                .Select(d => new { d.Year, d.Month })
+                .Distinct()
+                .OrderBy(x => x.Year)
+                .ThenBy(x => x.Month)
+                .ToArray();
+
+            var trends = monthsRange
+                .Select(m => new
+                {
+                    year = m.Year,
+                    month = m.Month,
+                    issuedAmount = issuedByMonth.TryGetValue(m, out var iss) ? iss : 0,
+                    paidAmount = paidByMonth.TryGetValue(m, out var p) ? p : 0,
+                    collectionRate = issuedByMonth.TryGetValue(m, out var issuedAmount) && issuedAmount > 0
+                        ? Math.Round((paidByMonth.TryGetValue(m, out var paidAmount) ? paidAmount : 0) / issuedAmount * 100, 2)
+                        : 0
+                })
+                .ToArray();
+
+            return Ok(trends);
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace FlowOps.Contracts.Response
 {
-    public sealed class EventResponse
+    public class EventResponse
     {
         public Guid Id { get; set; }
         public string Type { get; set; } = default!;

@@ -4,7 +4,7 @@ using FlowOps.Contracts.Response;
 using FlowOps.Contracts.Result;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FlowOps.Controllers
+namespace FlowOps.Controllers.Subscription
 {
     [Route("api/subscriptions")]
     [ApiController]
@@ -44,6 +44,56 @@ namespace FlowOps.Controllers
             }
             var items = await _queries.GetByCustomerAsync(customerId, status, ct);
             return Ok(items);
+        }
+        [HttpGet("by-customer/{customerId:guid}/plans/{planCode}")]
+        public async Task<ActionResult<IEnumerable<SubscriptionListItem>>> GetByCustomerAndPlan(
+            Guid customerId,
+            string planCode,
+            CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(planCode))
+            {
+                return BadRequest(new { message = "Plan code is required." });
+            }
+
+            var items = await _queries.GetByCustomerAsync(customerId, ct);
+            var filtered = items
+                .Where(i => string.Equals(i.PlanCode, planCode, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            return Ok(filtered);
+        }
+
+        [HttpGet("by-customer/{customerId:guid}/status-breakdown")]
+        public async Task<ActionResult<object>> GetStatusBreakdown(Guid customerId, CancellationToken ct)
+        {
+            var items = await _queries.GetByCustomerAsync(customerId, ct);
+
+            var byStatus = items
+                .GroupBy(i => i.Status)
+                .Select(g => new
+                {
+                    status = g.Key,
+                    count = g.Count(),
+                    plans = g
+                        .GroupBy(i => i.PlanCode)
+                        .Select(pg => new
+                        {
+                            planCode = pg.Key,
+                            count = pg.Count()
+                        })
+                        .OrderByDescending(p => p.count)
+                        .ToArray()
+                })
+                .OrderByDescending(g => g.count)
+                .ToArray();
+
+            return Ok(new
+            {
+                customerId,
+                total = items.Count,
+                byStatus
+            });
         }
         [HttpGet("sql/{subscriptionId:guid}")]
         public async Task<ActionResult<SubscriptionSqlResponse>> GetByIdSql(

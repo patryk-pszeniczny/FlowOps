@@ -3,7 +3,7 @@ using FlowOps.Contracts.Request;
 using FlowOps.Infrastructure.Idempotency;
 using FlowOps.Application.Subscriptions.Commands;
 
-namespace FlowOps.Controllers
+namespace FlowOps.Controllers.Subscription
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -102,6 +102,30 @@ namespace FlowOps.Controllers
                     message = "Subscription resumed",
                     subscriptionId = id
                 });
+        }
+        [HttpGet("idempotency/{key}")]
+        public ActionResult<object> InspectIdempotencyKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return BadRequest(new { message = "Idempotency key is required." });
+            }
+
+            if (_idempotency.TryGet(key, out var subscriptionId))
+            {
+                return Ok(new
+                {
+                    key,
+                    subscriptionId,
+                    status = "exists"
+                });
+            }
+
+            return NotFound(new
+            {
+                key,
+                status = "missing"
+            });
         }
 
     }
