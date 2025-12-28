@@ -1,204 +1,115 @@
-# FlowOps – Event‑Driven Subscription & Billing (MVP)
+# FlowOps - Subscriptions, Billing & Reporting (mikroserwisy .NET, EF Core)
 
-This is a **learning-first**, event‑driven platform in ASP.NET Core that demonstrates subscriptions, billing, reporting and replay - currently running **in a single process** for simplicity. The architecture and contracts are prepared to split into microservices later.
 
----
-
-## ✅ What’s implemented now
-
-- **Create & cancel subscriptions** (domain aggregate with invariants)
-- **Suspend / Resume** subscriptions
-- **Billing** on activation (`InvoiceIssuedEvent`) + **Payments** (`InvoicePaidEvent`)
-- **Reporting (read‑model)**: per‑customer `ActiveSubscriptions`, `ActiveSubscriptionIds`, `TotalInvoiced`, `TotalPaid`
-- **Event bus** (`IEventBus`) with **in‑memory** implementation
-- **Event recorder + replay** to rebuild read‑models
-- **ProblemDetails middleware** (400/404/409/500)
-- **Postman‑friendly endpoints**
-- **Dockerfile / docker compose**
+| Serwis | Rola | Domyślny port | Bazowy URL (lokalnie) |
+|---|---|---:|---|
+| `flowops` | Subscriptions, Customers, Pricing, System, Diagnostics, Event Store, User State | **5056** | `http://localhost:5056` |
+| `billing` | Faktury i płatności (Invoices/Payments) | **5057** | `http://localhost:5057` |
+| `reporting` | Raporty / analityka / (opcjonalnie) replay read-modelu | **5058** | `http://localhost:5058` |
 
 ---
 
-## 🧰 Requirements
+## API & endpointy
 
-- .NET SDK **9.0**
-- Visual Studio 2022 (Current, 17.8+ recommended)
-- Postman (or curl)
-- Docker Desktop (optional but supported)
 
----
+### FlowOps (`http://localhost:5056`)
 
-## 🗂️ Solution structure
+**System**
+- `GET /whoami`
+- `GET /api/system/ping`
+- `GET /api/system/uptime`
+- `GET /api/system/info`
+- `GET /healthz`
+- `GET /healthz/details`
 
-### `FlowOps` (ASP.NET Core Web API)
+**Pricing**
+- `GET /api/plans`
+- `GET /api/plans/{planCode}`
+- `GET /api/plans/recommendation?budget=...`
 
-**Contracts**
-- `Contracts/CreateSubscriptionRequest.cs`
-- `Contracts/PayInvoiceRequest.cs`
-- `Contracts/PlanResponse.cs`
-- `Contracts/SubscriptionDetailsResponse.cs`
+**Customers**
+- `POST /api/customer`
+- `GET /api/customer/{customerId}`
+- `GET /api/customer?take=...`
+- `GET /api/reporting/customers/{customerId}`
+- `GET /api/reporting/customers?q=...&take=...`
 
-**Domain / Application**
-- `Domain/Subscriptions/Subscription.cs` – aggregate + invariants (`Activate`, `Cancel`, `Suspend`, `Resume`, `Expire`)
-- `Domain/Subscriptions/SubscriptionStatus.cs`
-- `Domain/Subscriptions/InMemorySubscriptionRepository.cs`
-- `Application/Subscriptions/SubscriptionCommandService.cs` – orchestration (publish events)
+**Subscriptions**
+- `POST /api/subscriptions` (Idempotency-Key)
+- `POST /api/subscriptions/{subscriptionId}/cancel`
+- `POST /api/subscriptions/{subscriptionId}/suspend`
+- `POST /api/subscriptions/{subscriptionId}/resume`
+- `GET  /api/subscriptions/idempotency/{key}`
+- `GET  /api/subscriptions/{subscriptionId}`
+- `GET  /api/subscriptions/by-customer/{customerId}`
+- `GET  /api/subscriptions/by-customer/{customerId}/plans/{planCode}`
+- `GET  /api/subscriptions/by-customer/{customerId}/status-breakdown`
+- SQL/read endpoints:
+  - `GET /api/subscriptions/sql/{subscriptionId}`
+  - `GET /api/subscriptions/sql/by-customer/{customerId}?status=Active`
+  - `GET /api/subscriptions/sql/by-customer/{customerId}/paged?page=...&pageSize=...&orderBy=...&orderDirection=...`
+  - `GET /api/subscriptions/sql/by-customer/{customerId}/status-summary`
 
-**Events (integration)**
-- `Events/SubscriptionActivatedEvent.cs`
-- `Events/SubscriptionCancelledEvent.cs`
-- `Events/SubscriptionSuspendedEvent.cs`
-- `Events/SubscriptionResumedEvent.cs`
-- `Events/InvoicePaidEvent.cs`
+**User State**
+- `GET  /api/user-state/{userId}`
+- `POST /api/user-state/{userId}/preferences`
+- `POST /api/user-state/{userId}/drafts`
+- `POST /api/user-state/{userId}/cached-lists`
 
-**Billing**
-- `Pricing/IPlanPricing.cs`
-- `Pricing/InMemoryPlanPricing.cs`
-- `Services/Billing/IBillingHandler.cs`
-- `Services/Billing/BillingHandler.cs` – uses pricing & publishes `InvoiceIssuedEvent` (+ retry)
-- `Services/Billing/BillingListener.cs` – subscribes to `SubscriptionActivatedEvent` (logs cancel)
-
-**Reporting (CQRS/read‑model)**
-- `Reports/Models/CustomerReport.cs` (includes `ActiveSubscriptionIds`)
-- `Reports/Stores/IReportingStore.cs`
-- `Reports/Stores/InMemoryReportingStore.cs`
-- `Services/Reporting/IReportingHandler.cs`
-- `Services/Reporting/ReportingHandler.cs` – updates: active/invoiced/paid + suspended/resumed/cancelled and ID set
-- `Services/Reporting/ReportingListener.cs` – subscribes to events and routes to handler
-
-**Replay**
-- `Services/Replay/EventRecorder.cs` – in‑memory append‑only buffer
-- `Services/Replay/EventRecorderListener.cs` – records key events for replay (incl. suspend/resume)
-- `Controllers/ReplayController.cs` – snapshot (sorted) + rebuild reports (clears store and replays)
-
-**API**
-- `Controllers/SubscriptionsController.cs` – `POST /api/subscriptions`, `POST /api/subscriptions/{id}/cancel`, `.../suspend`, `.../resume`
-- `Controllers/SubscriptionQueriesController.cs` – `GET /api/subscriptions/{id}`
-- `Controllers/PaymentsController.cs` – `POST /api/payments`
-- `Controllers/ReportsController.cs` – 
-  - `GET /api/reports/customers/{customerId}`
-  - `GET /api/reports/customers/{customerId}/active-subscriptions`
-- `Controllers/PlansController.cs` – `GET /api/plans`
-
-**Middleware**
-- `Middleware/ProblemDetailsMiddleware.cs` – consistent 400/404/409/500 responses
-
-**Composition**
-- `Program.cs` – DI registrations for EventBus, Repository, Billing, Reporting, Replay, Pricing, Controllers + health checks
-
-### `FlowOps.BuildingBlocks` (shared)
-
-- `Integration/IntegrationEvent.cs` — `Id`, `OccurredOn`, `Version`
-- `Integration/InvoiceIssuedEvent.cs`
-- `Messaging/IEventBus.cs`, `Messaging/InMemoryEventBus.cs`
+**Diagnostics**
+- `GET    /api/diagnostics/integration-events?take=...`
+- `GET    /api/diagnostics/integration-events/summary`
+- `DELETE /api/diagnostics/integration-events`
+- `GET    /api/diagnostics/storage/overview`
+- `GET    /api/diagnostics/storage/user-state`
+- Idempotency keys:
+  - `GET    /api/diagnostics/idempotency`
+  - `GET    /api/diagnostics/idempotency/{key}`
+  - `POST   /api/diagnostics/idempotency`
+  - `DELETE /api/diagnostics/idempotency/{key}`
+  - `DELETE /api/diagnostics/idempotency`
+- Event store:
+  - `GET /api/event-store/events`
+  - `GET /api/event-store/events/{eventId}`
+  - `GET /api/event-store/events/search?type=&since=&until=&take=...`
+  - `GET /api/event-store/types`
+  - `GET /api/event-store/stats`
 
 ---
 
-## 🔄 Event flow (happy path)
+### Billing (`http://localhost:5057`)
 
-1. **Create Subscription** → `SubscriptionCommandService` activates aggregate → publishes **`SubscriptionActivatedEvent`**
-2. **BillingListener** receives activation → **BillingHandler** computes amount via pricing → publishes **`InvoiceIssuedEvent`**
-3. **ReportingListener / ReportingHandler** updates:
-   - `ActiveSubscriptions += 1`
-   - `ActiveSubscriptionIds.Add(subscriptionId)`
-   - `TotalInvoiced += amount`
-4. **PaymentsController** publishes **`InvoicePaidEvent`** → Reporting updates `TotalPaid`
+**Invoices**
+- `POST /api/invoices/issue`
+- `POST /api/invoices/{invoiceId}/pay`
+- `GET  /api/invoices?status=issued`
+- `GET  /api/invoices/{invoiceId}`
+- `GET  /api/invoices/summary`
 
-Cancellation / suspend / resume:
-
-- `POST /api/subscriptions/{id}/cancel` → `SubscriptionCancelledEvent` → Reporting: `ActiveSubscriptions--`, `ActiveSubscriptionIds.Remove(id)`
-- `POST /api/subscriptions/{id}/suspend` → `SubscriptionSuspendedEvent` → Reporting: `ActiveSubscriptions--`, `ActiveSubscriptionIds.Remove(id)`
-- `POST /api/subscriptions/{id}/resume` → `SubscriptionResumedEvent` → Reporting: `ActiveSubscriptions++`, `ActiveSubscriptionIds.Add(id)`
-
-Replay:
-
-- **EventRecorder** records key events
-- `POST /api/replay/reports/rebuild` clears in‑memory store and replays events (ordered by `OccurredOn`, then `Version`)
+**Payments**
+- `POST /api/payments`
+- `GET  /api/payments/history?customerId=...`
+- `GET  /api/payments/stats`
 
 ---
 
-## 🚀 Run
+### Reporting (`http://localhost:5058`)
 
-### Visual Studio
-1. Set **FlowOps** as startup project
-2. `F5` (IIS Express or Kestrel)
+**Analytics**
+- `GET /api/analytics/activity?take=...`
+- `GET /api/analytics/billing`
+- `GET /api/analytics/subscriptions/status`
+- `GET /api/analytics/subscriptions/velocity?days=...`
+- `GET /api/analytics/billing/trends?months=...`
 
-### Docker compose
-`docker-compose.yml` example:
-```yaml
-services:
-  flowops:
-    build:
-      context: .
-      dockerfile: FlowOps/Dockerfile
-    image: flowops:dev
-    container_name: flowops
-    environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      ASPNETCORE_HTTP_PORTS: "8080"
-    ports:
-      - "5056:8080"
-```
-Run:
-```bash
-docker compose up -d --build
-```
+**Reports**
+- `GET /api/reports/customers/{customerId}`
+- `GET /api/reports/customers/{customerId}/active-subscriptions`
+- `GET /api/reports/customers/{customerId}/timeline`
 
-Healthcheck (if mapped):
-```
-GET http://localhost:5056/healthz
-```
+**Replay** (jeśli wystawione w reporting)
+- `GET    /api/replay/events`
+- `POST   /api/replay/reports/rebuild`
+- `DELETE /api/replay/events`
 
----
-
-## 📡 Endpoints (examples)
-
-### Create subscription
-`POST /api/subscriptions`
-```json
-{
-  "customerId": "11111111-1111-1111-1111-111111111111",
-  "planCode": "PRO"
-}
-```
-**200 OK**
-```json
-{ "message": "Subscription created and event published.", "subscriptionId": "..." }
-```
-
-### Cancel / Suspend / Resume
-`POST /api/subscriptions/{subscriptionId}/cancel`  
-`POST /api/subscriptions/{subscriptionId}/suspend`  
-`POST /api/subscriptions/{subscriptionId}/resume`
-
-### Pay invoice
-`POST /api/payments`
-```json
-{
-  "invoiceId": "00000000-0000-0000-0000-000000000000",
-  "customerId": "11111111-1111-1111-1111-111111111111",
-  "subscriptionId": "put-created-subscriptionId-here",
-  "amount": 99,
-  "currency": "PLN",
-  "paymentMethod": "CARD",
-  "transactionId": "TX-123"
-}
-```
-
-### Get reports
-`GET /api/reports/customers/{customerId}`  
-`GET /api/reports/customers/{customerId}/active-subscriptions`
-
-### Plans
-`GET /api/plans`
-
-### Replay
-`GET /api/replay/events`  
-`POST /api/replay/reports/rebuild`
-
----
-
-## 📝 Notes
-
-- `PlanCode` amounts in `InMemoryPlanPricing`:
-  - `PRO` = 99, `BUSINESS` = 199, `ENTERPRISE` = 499
-- Read‑model is intentionally **in‑memory** for MVP and replay demo.
+Projekt ma charakter edukacyjny i służy do nauki architektury event-driven, DDD i CQRS w praktyce.
