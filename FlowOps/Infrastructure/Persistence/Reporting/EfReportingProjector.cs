@@ -79,15 +79,18 @@ namespace FlowOps.Infrastructure.Persistence.Reporting
             });
 
         private Task OnInvoiced(InvoiceIssuedEvent ev) =>
-            WithDbContext(ev.CustomerId, async (_, report, ct) =>
-            {
-                report.TotalInvoiced += ev.Amount;
-            });
+             WithDbContext(ev.CustomerId, (_, report, _) =>
+             {
+                 report.TotalInvoiced += ev.Amount;
+                 return Task.CompletedTask;
+             });
+
 
         private Task OnPaid(InvoicePaidEvent ev) =>
-            WithDbContext(ev.CustomerId, async (_, report, ct) =>
+            WithDbContext(ev.CustomerId, (_, report, _) =>
             {
                 report.TotalPaid += ev.Amount;
+                return Task.CompletedTask;
             });
 
         private Task RemoveActive(Guid customerId, Guid subscriptionId) =>
