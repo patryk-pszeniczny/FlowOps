@@ -27,19 +27,22 @@ namespace FlowOps.Infrastructure.Health
                 var oldestPending = await _dbContext.OutboxMessages
                     .Where(m => m.ProcessedAt == null)
                     .OrderBy(m => m.OccurredOn)
-                    .Select(m => m.OccurredOn)
+                    .Select(m => (DateTime?)m.OccurredOn)
                     .FirstOrDefaultAsync(cancellationToken)
                     .ConfigureAwait(false);
 
                 var description = oldestPending == default
                     ? "Outbox is empty."
                     : $"Oldest pending message queued at {oldestPending:O}.";
-
-                return HealthCheckResult.Healthy(description, new Dictionary<string, object?>
+                var data = new Dictionary<string, object>
                 {
-                    ["pendingCount"] = pendingCount,
-                    ["oldestPending"] = oldestPending
-                });
+                    ["pendingCount"] = pendingCount
+                };
+                if(oldestPending is not null)
+                {
+                    data["oldestPending"] = oldestPending;
+                }
+                return HealthCheckResult.Healthy(description, data);
             }
             catch (Exception ex)
             {

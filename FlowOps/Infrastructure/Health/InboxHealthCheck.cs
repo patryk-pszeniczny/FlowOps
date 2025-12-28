@@ -24,10 +24,11 @@ namespace FlowOps.Infrastructure.Health
                     .CountAsync(cancellationToken)
                     .ConfigureAwait(false);
 
-                return HealthCheckResult.Healthy("Inbox is reachable.", new Dictionary<string, object?>
+                var data = new Dictionary<string, object>
                 {
                     ["processedLastHour"] = processedLastHour
-                });
+                };
+                return HealthCheckResult.Healthy("Inbox is reachable.", data);
             }
             catch (Exception ex)
             {
