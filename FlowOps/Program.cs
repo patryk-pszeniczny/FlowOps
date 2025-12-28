@@ -56,9 +56,16 @@ builder.Services
 
 builder.Services.AddDbContext<FlowOpsDbContext>(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("FlowOpsDatabase")
-       ?? throw new InvalidOperationException("Missing connection string 'FlowOpsDatabase'. Configure it in appsettings or env ConnectionStrings__FlowOpsDatabase.");
-
+    if(builder.Environment.IsEnvironment("Testing"))
+    {
+        return;
+    }
+    var connectionString = builder.Configuration.GetConnectionString("FlowOpsDatabase");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        throw new InvalidOperationException(
+            "Missing connection string 'FlowOpsDatabase'. Configure it in appsettings or env ConnectionStrings__FlowOpsDatabase.");
+    }
     options.UseSqlServer(connectionString);
 });
 
@@ -151,14 +158,15 @@ var app = builder.Build();
 
 app.Logger.LogInformation("FLOWOPS_ROLE={Role}", role);
 
-using var scope = app.Services.CreateScope();
-var db = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
+if (!app.Environment.IsEnvironment("Testing")) {
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<FlowOpsDbContext>();
 
-await db.Database.MigrateAsync();
+    await db.Database.MigrateAsync();
 
-var userStateInitializer = scope.ServiceProvider.GetRequiredService<UserStateInitializer>();
-await userStateInitializer.InitializeAsync();
-
+    var userStateInitializer = scope.ServiceProvider.GetRequiredService<UserStateInitializer>();
+    await userStateInitializer.InitializeAsync();
+}
 if (isReporting)
 {
     using var scope_queries = app.Services.CreateScope();
@@ -215,3 +223,5 @@ app.MapHealthChecks("/healthz/details", new HealthCheckOptions
 });
 
 app.Run();
+
+public partial class Program { }
